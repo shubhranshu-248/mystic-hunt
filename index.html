@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en" class="pre-load">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000004">
+<title>MYSTIC HUNT — Seek. Scan. Solve.</title>
+<meta name="description" content="A trial stands between you and the greatest hunt of Infinity 2K26.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Creepster&family=MedievalSharp&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="preload" href="music_loop.wav" as="audio">
+<link rel="preload" href="chest_open.wav" as="audio">
+<script>
+  // Runs before the browser paints — instantly hides typewriter text
+  // so nothing flashes fully-rendered before we begin typing.
+  document.documentElement.classList.add('pre-typewriter');
+</script>
+</head>
+<body>
+
+<!-- ========== MOVING BACKGROUND ========== -->
+<canvas id="bgCanvas" class="bg-canvas"></canvas>
+<div class="fx-layer">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="grid-floor"></div>
+  <div class="scanlines"></div>
+  <div class="vignette"></div>
+</div>
+
+<!-- ========== CHEST LOADING SCREEN ========== -->
+<div class="chest-loader" id="chestLoader">
+  <div class="cl-inner">
+    <div class="cl-halo"></div>
+    <div class="cl-embers" id="clEmbers"></div>
+    <svg class="cl-chest" viewBox="0 0 320 280" id="clChest" role="button" aria-label="Open Chest">
+      <defs>
+        <linearGradient id="clWood" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#5a3a1a"/><stop offset="1" stop-color="#1a0d05"/>
+        </linearGradient>
+        <linearGradient id="clGold" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#fff2b3"/>
+          <stop offset="0.35" stop-color="#ffd76b"/>
+          <stop offset="1" stop-color="#8a5a10"/>
+        </linearGradient>
+        <linearGradient id="clGoldSide" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#8a5a10"/>
+          <stop offset="0.5" stop-color="#ffd76b"/>
+          <stop offset="1" stop-color="#8a5a10"/>
+        </linearGradient>
+        <radialGradient id="clGem" cx="0.4" cy="0.4" r="0.6">
+          <stop offset="0" stop-color="#ff9a9a"/>
+          <stop offset="0.5" stop-color="#ff2e2e"/>
+          <stop offset="1" stop-color="#7a0808"/>
+        </radialGradient>
+        <radialGradient id="clInner" cx="0.5" cy="0.5" r="0.6">
+          <stop offset="0" stop-color="#fff2b3"/>
+          <stop offset="0.6" stop-color="#ffd76b"/>
+          <stop offset="1" stop-color="#3a2410"/>
+        </radialGradient>
+      </defs>
+
+      <!-- CHEST BODY -->
+      <g class="cl-body">
+        <rect x="40" y="140" width="240" height="120" rx="10" fill="url(#clWood)" stroke="#0d0402" stroke-width="3"/>
+        <rect x="36" y="155" width="248" height="7" fill="url(#clGoldSide)"/>
+        <rect x="36" y="240" width="248" height="7" fill="url(#clGoldSide)"/>
+        <!-- Vertical bands -->
+        <rect x="55" y="140" width="6" height="120" fill="url(#clGoldSide)" opacity="0.9"/>
+        <rect x="259" y="140" width="6" height="120" fill="url(#clGoldSide)" opacity="0.9"/>
+        <!-- Studs -->
+        <circle cx="70" cy="200" r="3" fill="#ffd76b"/>
+        <circle cx="250" cy="200" r="3" fill="#ffd76b"/>
+        <!-- Interior visible when lid opens -->
+        <rect class="cl-interior" id="clInterior" x="52" y="145" width="216" height="22" rx="4" fill="url(#clInner)" opacity="0"/>
+        <!-- Lock plate -->
+        <rect x="140" y="180" width="40" height="46" rx="3" fill="url(#clGold)" stroke="#6b4a1a" stroke-width="1.5"/>
+        <circle cx="160" cy="197" r="6" fill="#0d0402"/>
+        <rect x="158" y="203" width="4" height="16" fill="#0d0402"/>
+      </g>
+
+      <!-- CHEST LID -->
+      <g class="cl-lid" id="clLid">
+        <path d="M 40 140 Q 40 50 160 50 Q 280 50 280 140 Z" fill="url(#clWood)" stroke="#0d0402" stroke-width="3"/>
+        <path d="M 40 140 Q 40 50 160 50 Q 280 50 280 140" fill="none" stroke="url(#clGold)" stroke-width="4"/>
+        <!-- Ornate studs on lid -->
+        <circle cx="70" cy="110" r="3.5" fill="url(#clGold)"/>
+        <circle cx="250" cy="110" r="3.5" fill="url(#clGold)"/>
+        <circle cx="95" cy="85" r="3" fill="url(#clGold)"/>
+        <circle cx="225" cy="85" r="3" fill="url(#clGold)"/>
+        <circle cx="130" cy="70" r="3" fill="url(#clGold)"/>
+        <circle cx="190" cy="70" r="3" fill="url(#clGold)"/>
+        <!-- Central rune -->
+        <text x="160" y="120" text-anchor="middle" font-size="26" fill="url(#clGold)" font-family="Cinzel Decorative" font-weight="900">✦</text>
+        <!-- Red gem centerpiece -->
+        <g transform="translate(160,90)">
+          <ellipse cx="0" cy="0" rx="18" ry="12" fill="url(#clGem)" stroke="#ffd76b" stroke-width="1.5"/>
+          <ellipse cx="-4" cy="-3" rx="5" ry="3" fill="#fff" opacity="0.5"/>
+        </g>
+      </g>
+    </svg>
+
+    <div class="cl-hint" id="clHint">✦ TAP DIRECTLY ON THE CHEST ✦</div>
+    <div class="cl-sub">The Mystic Hunt awaits your touch</div>
+  </div>
+</div>
+
+<!-- ========== MUSIC CONTROL ========== -->
+<button class="music-btn" id="musicBtn" aria-label="Toggle music">
+  <div class="music-bars">
+    <span class="bar bar-1"></span>
+    <span class="bar bar-2"></span>
+    <span class="bar bar-3"></span>
+  </div>
+  <svg class="ico-off" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02z" fill="currentColor"/><line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2"/></svg>
+  <svg class="ico-on" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" fill="currentColor"/></svg>
+</button>
+<audio id="bgMusic" src="music_loop.wav" loop preload="auto"></audio>
+
+<!-- ========== APP ========== -->
+<main class="app">
+
+<!-- ---------- SCREEN 1: LANDING ---------- -->
+<section class="screen on" id="s-intro">
+  <header class="intro-header">
+    <div class="brand-line seq-el" id="seqBrand">
+      <span class="dot"></span>
+      <span class="brand-txt" id="brandTxt" data-seq-text="DEPARTMENT OF CSE · SVPCET PRESENTS"></span>
+      <span class="dot"></span>
+    </div>
+
+    <!-- Crest emblem -->
+    <div class="crest seq-el" id="seqCrest">
+      <svg viewBox="0 0 120 120">
+        <defs>
+          <radialGradient id="cg1" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffd76b"/><stop offset="0.6" stop-color="#ff2e2e"/><stop offset="1" stop-color="#050514"/></radialGradient>
+          <linearGradient id="cg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7ee8ff"/><stop offset="1" stop-color="#6b2fb7"/></linearGradient>
+        </defs>
+        <circle cx="60" cy="60" r="54" fill="none" stroke="url(#cg1)" stroke-width="1.5" opacity="0.6"/>
+        <circle cx="60" cy="60" r="48" fill="none" stroke="url(#cg2)" stroke-width="1.2" stroke-dasharray="4 3" class="crest-ring-1"/>
+        <circle cx="60" cy="60" r="38" fill="none" stroke="url(#cg1)" stroke-width="1.5" stroke-dasharray="6 4" class="crest-ring-2"/>
+        <polygon points="60,18 70,48 102,48 76,66 86,96 60,78 34,96 44,66 18,48 50,48" fill="none" stroke="#ffd76b" stroke-width="1.8"/>
+        <circle cx="60" cy="60" r="14" fill="#050514" stroke="#ffd76b" stroke-width="2"/>
+        <text x="60" y="66" text-anchor="middle" font-size="18" fill="#ffd76b" font-family="Cinzel Decorative" font-weight="900">∞</text>
+      </svg>
+    </div>
+
+    <h1 class="title-main seq-el" id="seqTitle">
+      <span class="glitch" id="titleMystic" data-text="MYSTIC" data-seq-glitch="MYSTIC"></span>
+      <span class="glitch red" id="titleHunt" data-text="HUNT" data-seq-glitch="HUNT"></span>
+    </h1>
+    <p class="tagline seq-el" id="seqTagline" data-seq-text="SEEK · SCAN · SOLVE"></p>
+    <p class="lead seq-el" id="seqLead" data-seq-text="A trial stands between you and the greatest hunt of the season. Pass one to unseal the mystery."></p>
+
+    <div class="countdown seq-el" id="countdown">
+      <span class="cd-label">T-MINUS</span>
+      <div class="cd-unit"><b id="cdD">--</b><span>DAYS</span></div>
+      <span class="cd-sep">:</span>
+      <div class="cd-unit"><b id="cdH">--</b><span>HRS</span></div>
+      <span class="cd-sep">:</span>
+      <div class="cd-unit"><b id="cdM">--</b><span>MIN</span></div>
+      <span class="cd-sep">:</span>
+      <div class="cd-unit"><b id="cdS">--</b><span>SEC</span></div>
+    </div>
+
+    <div class="meta-strip seq-el" id="seqMeta">
+      <div><b>10</b><span>SEPT</span></div>
+      <div class="sep"></div>
+      <div><b>2–4</b><span>HUNTERS</span></div>
+      <div class="sep"></div>
+      <div><b>₹3K+</b><span>PRIZE</span></div>
+    </div>
+  </header>
+
+  <div class="section-label seq-el" id="seqLabel"><span id="sectionLabelTxt" data-seq-text="CHOOSE YOUR TRIAL"></span></div>
+
+  <div class="trials" id="trials">
+    <div class="trial seq-trial" data-go="s-chest">
+      <div class="done-badge">✓</div>
+      <div class="trial-glow"></div>
+      <div class="trial-icon">
+        <svg viewBox="0 0 60 60"><defs><linearGradient id="ti1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd76b"/><stop offset="1" stop-color="#8a5a10"/></linearGradient></defs>
+        <rect x="8" y="26" width="44" height="24" rx="2" fill="#3a1810" stroke="url(#ti1)" stroke-width="1.5"/>
+        <path d="M 8 26 Q 8 12 30 12 Q 52 12 52 26 Z" fill="#1f0a08" stroke="url(#ti1)" stroke-width="1.5"/>
+        <rect x="26" y="30" width="8" height="10" rx="1" fill="url(#ti1)"/></svg>
+      </div>
+      <h3>THE CHEST</h3>
+      <p>Crack the rune-code</p>
+      <div class="trial-tag">TRIAL I · ~60s</div>
+    </div>
+
+    <div class="trial seq-trial" data-go="s-circuit">
+      <div class="done-badge">✓</div>
+      <div class="trial-glow"></div>
+      <div class="trial-icon">
+        <svg viewBox="0 0 60 60">
+          <defs>
+            <linearGradient id="tiCircuit" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7ee8ff"/><stop offset="1" stop-color="#27c969"/></linearGradient>
+          </defs>
+          <rect x="8" y="8" width="44" height="44" rx="8" fill="#08101a" stroke="url(#tiCircuit)" stroke-width="1.4"/>
+          <path d="M 8 20 H 26 V 40 H 52" fill="none" stroke="url(#tiCircuit)" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="8" cy="20" r="4" fill="#7ee8ff"/>
+          <circle cx="52" cy="40" r="4" fill="#ffd76b"/>
+          <circle cx="26" cy="30" r="2.5" fill="#fff"/>
+        </svg>
+      </div>
+      <h3>THE ASTRAL CIRCUIT</h3>
+      <p>Connect the energy conduits</p>
+      <div class="trial-tag">TRIAL II · ~60s</div>
+    </div>
+
+    <div class="trial seq-trial" data-go="s-sigils">
+      <div class="done-badge">✓</div>
+      <div class="trial-glow"></div>
+      <div class="trial-icon">
+        <svg viewBox="0 0 60 60"><defs><linearGradient id="ti3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd76b"/><stop offset="1" stop-color="#8a5a10"/></linearGradient></defs>
+        <rect x="8" y="12" width="14" height="18" rx="2" fill="#2a1547" stroke="url(#ti3)" stroke-width="1.2"/>
+        <rect x="26" y="12" width="14" height="18" rx="2" fill="#2a1547" stroke="url(#ti3)" stroke-width="1.2"/>
+        <rect x="44" y="12" width="14" height="18" rx="2" fill="url(#ti3)"/>
+        <text x="51" y="25" text-anchor="middle" font-size="10" fill="#050514">☾</text>
+        <rect x="8" y="34" width="14" height="18" rx="2" fill="url(#ti3)"/>
+        <text x="15" y="47" text-anchor="middle" font-size="10" fill="#050514">☾</text>
+        <rect x="26" y="34" width="14" height="18" rx="2" fill="#2a1547" stroke="url(#ti3)" stroke-width="1.2"/>
+        <rect x="44" y="34" width="14" height="18" rx="2" fill="#2a1547" stroke="url(#ti3)" stroke-width="1.2"/></svg>
+      </div>
+      <h3>THE SIGILS</h3>
+      <p>Match the ancient runes</p>
+      <div class="trial-tag">TRIAL III · ~60s</div>
+    </div>
+
+    <div class="trial seq-trial" data-go="s-astrolabe">
+      <div class="done-badge">✓</div>
+      <div class="trial-glow red"></div>
+      <div class="trial-icon">
+        <svg viewBox="0 0 60 60">
+          <defs>
+            <linearGradient id="tiAstro" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd76b"/><stop offset="1" stop-color="#ff2e2e"/></linearGradient>
+          </defs>
+          <circle cx="30" cy="30" r="22" fill="#0a0518" stroke="url(#tiAstro)" stroke-width="1.5"/>
+          <circle cx="30" cy="30" r="15" fill="none" stroke="url(#tiAstro)" stroke-width="1" stroke-dasharray="3 2"/>
+          <circle cx="30" cy="30" r="8" fill="none" stroke="#7ee8ff" stroke-width="1.2"/>
+          <line x1="30" y1="4" x2="30" y2="56" stroke="#ffd76b" stroke-width="1.2"/>
+          <circle cx="30" cy="30" r="3.5" fill="#ffd76b"/>
+          <text x="30" y="16" text-anchor="middle" font-size="7" fill="#ffd76b">✦</text>
+          <text x="30" y="47" text-anchor="middle" font-size="7" fill="#7ee8ff">☾</text>
+        </svg>
+      </div>
+      <h3>THE CELESTIAL ASTROLABE</h3>
+      <p>Align the concentric rings</p>
+      <div class="trial-tag">TRIAL IV · ~60s</div>
+    </div>
+  </div>
+
+  <div class="foot-signature seq-el" id="seqFoot">✦ ONE TRIAL UNSEALS THE HUNT ✦</div>
+</section>
+
+
+<!-- ---------- SCREEN 2: CHEST ---------- -->
+<section class="screen" id="s-chest">
+  <div class="topbar">
+    <button class="back-btn" data-back>← TRIALS</button>
+    <span class="topbar-title">TRIAL I · THE CHEST</span><span></span>
+  </div>
+  <div class="panel-header">
+    <h2>CRACK THE RUNESTONE</h2>
+    <p>Guess the 4-digit code. Each try gives you clues.</p>
+  </div>
+
+  <div class="chest-box">
+    <svg viewBox="0 0 200 130" class="chest-svg" id="chest">
+      <defs>
+        <linearGradient id="chWood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a3a1a"/><stop offset="1" stop-color="#2a1408"/></linearGradient>
+        <linearGradient id="chGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd76b"/><stop offset="1" stop-color="#8a5a10"/></linearGradient>
+        <linearGradient id="chGem" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff7b7b"/><stop offset="1" stop-color="#a00808"/></linearGradient>
+      </defs>
+      <g class="chest-base">
+        <rect x="25" y="55" width="150" height="65" rx="6" fill="url(#chWood)" stroke="#120703" stroke-width="2"/>
+        <rect x="23" y="65" width="154" height="4" fill="url(#chGold)"/>
+        <rect x="23" y="110" width="154" height="4" fill="url(#chGold)"/>
+        <rect x="35" y="55" width="4" height="65" fill="url(#chGold)" opacity="0.8"/>
+        <rect x="161" y="55" width="4" height="65" fill="url(#chGold)" opacity="0.8"/>
+        <rect x="88" y="78" width="24" height="28" rx="2" fill="url(#chGold)" stroke="#3a2005" stroke-width="1"/>
+        <circle cx="100" cy="88" r="3.5" fill="#120703"/>
+        <rect x="99" y="91" width="2" height="9" fill="#120703"/>
+      </g>
+      <g class="chest-lid" id="chestLid">
+        <path d="M 25 55 Q 25 15 100 15 Q 175 15 175 55 Z" fill="url(#chWood)" stroke="#120703" stroke-width="2"/>
+        <path d="M 25 55 Q 25 15 100 15 Q 175 15 175 55" fill="none" stroke="url(#chGold)" stroke-width="2.5"/>
+        <circle cx="45" cy="40" r="2.5" fill="url(#chGold)"/>
+        <circle cx="155" cy="40" r="2.5" fill="url(#chGold)"/>
+        <circle cx="70" cy="28" r="2" fill="url(#chGold)"/>
+        <circle cx="130" cy="28" r="2" fill="url(#chGold)"/>
+        <circle cx="100" cy="20" r="2" fill="url(#chGold)"/>
+        <polygon points="100,28 103,37 112,37 105,42 107,51 100,46 93,51 95,42 88,37 97,37" fill="url(#chGold)"/>
+        <ellipse cx="100" cy="38" rx="4" ry="5" fill="url(#chGem)"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="codebox" id="codebox">
+    <div class="digit" data-i="0"></div><div class="digit" data-i="1"></div>
+    <div class="digit" data-i="2"></div><div class="digit" data-i="3"></div>
+  </div>
+
+  <div class="status-row">
+    <div>TRIES · <span id="tries">6</span></div>
+    <div class="timer" id="timer">01:00</div>
+  </div>
+
+  <div class="legend">
+    <span><i class="green"></i>Right digit, right slot</span>
+    <span><i class="amber"></i>Right digit, wrong slot</span>
+  </div>
+
+  <div class="history" id="history"></div>
+  <div class="hint" id="chestHint">Enter 4 digits, tap the rune ✦</div>
+
+  <div class="keypad" id="keypad">
+    <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+    <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+    <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
+    <button class="key clear" data-k="clear">✕</button>
+    <button class="key" data-k="0">0</button>
+    <button class="key action" data-k="try" id="tryBtn" disabled>✦</button>
+  </div>
+</section>
+
+
+<!-- ---------- SCREEN 3: THE ASTRAL CIRCUIT ---------- -->
+<section class="screen" id="s-circuit">
+  <div class="topbar">
+    <button class="back-btn" data-back>← TRIALS</button>
+    <span class="topbar-title">TRIAL II · THE ASTRAL CIRCUIT</span><span></span>
+  </div>
+  <div class="panel-header">
+    <h2>THE ASTRAL CIRCUIT</h2>
+    <p>Tap conduit tiles to rotate them. Connect the unbroken glowing line from <b>SOURCE (Alpha)</b> to <b>REACTOR (Omega)</b>.</p>
+  </div>
+
+  <div class="status-row">
+    <div>VOLTAGE · <span id="circuitVoltage">0%</span></div>
+    <div>STATUS · <span id="circuitStatus" class="status-locked">OFFLINE</span></div>
+    <div class="timer" id="circuitTimer">01:00</div>
+  </div>
+
+  <div class="circuit-container" id="circuitWrap">
+    <div class="circuit-terminal start" title="Power Source Alpha">
+      <span class="term-sym">α</span>
+      <span class="term-lbl">SOURCE</span>
+    </div>
+    <div class="circuit-grid" id="circuitGrid">
+      <!-- 16 tiles dynamically generated -->
+    </div>
+    <div class="circuit-terminal end" id="circuitEndTerm" title="Reactor Core Omega">
+      <span class="term-sym">Ω</span>
+      <span class="term-lbl">CORE</span>
+    </div>
+  </div>
+
+  <div class="hint" id="circuitHint">Tap any tile to rotate it 90°. Form a glowing connected path to Core Ω.</div>
+</section>
+
+
+<!-- ---------- SCREEN 4: SIGILS ---------- -->
+<section class="screen" id="s-sigils">
+  <div class="topbar">
+    <button class="back-btn" data-back>← TRIALS</button>
+    <span class="topbar-title">TRIAL III · THE SIGILS</span><span></span>
+  </div>
+  <div class="panel-header">
+    <h2>AWAKEN THE SIGILS</h2>
+    <p>Match all six pairs to summon the hunt.</p>
+  </div>
+  <div class="status-row">
+    <div>PAIRS · <span id="matches">0</span>/6</div>
+    <div>MOVES · <span id="moves">0</span></div>
+  </div>
+  <div class="memo-grid" id="memoGrid"></div>
+  <div class="hint" id="sigilHint">Tap two sigils to reveal them.</div>
+</section>
+
+
+<!-- ---------- SCREEN 5: THE CELESTIAL ASTROLABE ---------- -->
+<section class="screen" id="s-astrolabe">
+  <div class="topbar">
+    <button class="back-btn" data-back>← TRIALS</button>
+    <span class="topbar-title">TRIAL IV · THE CELESTIAL ASTROLABE</span><span></span>
+  </div>
+  <div class="panel-header">
+    <h2>THE CELESTIAL ASTROLABE</h2>
+    <p>Rotate the three ancient rings until their target glyphs align with the <b>Golden Ley-Line</b>.</p>
+  </div>
+
+  <div class="astrolabe-targets-card">
+    <div class="targets-title">✦ TARGET ALIGNMENT ✦</div>
+    <div class="targets-row" id="astrolabeTargets">
+      <div class="target-slot" id="targetOuter"><span class="ring-lbl">RING I</span><b class="target-glyph" id="tGlyphOuter">✦</b><span class="slot-status" id="tStatOuter">WAITING</span></div>
+      <div class="target-slot" id="targetMid"><span class="ring-lbl">RING II</span><b class="target-glyph" id="tGlyphMid">☾</b><span class="slot-status" id="tStatMid">WAITING</span></div>
+      <div class="target-slot" id="targetInner"><span class="ring-lbl">RING III</span><b class="target-glyph" id="tGlyphInner">☥</b><span class="slot-status" id="tStatInner">WAITING</span></div>
+    </div>
+  </div>
+
+  <div class="status-row">
+    <div>ALIGNED · <span id="astrolabeAligned">0</span>/3</div>
+    <div>SEAL · <span id="astrolabeStatus" class="status-locked">LOCKED</span></div>
+    <div class="timer" id="astrolabeTimer">01:00</div>
+  </div>
+
+  <div class="astrolabe-stage" id="astrolabeStage">
+    <div class="astrolabe-beam" id="astrolabeBeam"></div>
+    <div class="astrolabe-reticle top"></div>
+    <div class="astrolabe-reticle bot"></div>
+
+    <div class="astro-ring ring-outer" id="ringOuter"></div>
+    <div class="astro-ring ring-mid" id="ringMid"></div>
+    <div class="astro-ring ring-inner" id="ringInner"></div>
+
+    <div class="astro-sun" id="astroSun">
+      <span class="sun-orb">∞</span>
+    </div>
+  </div>
+
+  <div class="astrolabe-controls">
+    <button class="astro-btn" id="btnRotateOuter">
+      <span class="btn-top">ROTATE I</span>
+      <span class="btn-sub">OUTER RING</span>
+    </button>
+    <button class="astro-btn" id="btnRotateMid">
+      <span class="btn-top">ROTATE II</span>
+      <span class="btn-sub">MIDDLE RING</span>
+    </button>
+    <button class="astro-btn" id="btnRotateInner">
+      <span class="btn-top">ROTATE III</span>
+      <span class="btn-sub">INNER RING</span>
+    </button>
+  </div>
+
+  <div class="hint" id="astrolabeHint">Tap the rotate buttons to spin each ring until its target glyph crosses the vertical beam.</div>
+</section>
+
+
+<!-- ---------- REVEAL ---------- -->
+<section class="screen reveal" id="reveal">
+  <div class="reveal-banner">
+    <span class="banner-line"></span>
+    <span class="banner-text">✦ THE SEAL IS BROKEN ✦</span>
+    <span class="banner-line"></span>
+  </div>
+  <div class="poster-frame">
+    <div class="frame-corner tl"></div><div class="frame-corner tr"></div>
+    <div class="frame-corner bl"></div><div class="frame-corner br"></div>
+    <img src="poster.jpg" alt="Mystic Hunt — Infinity 2K26" class="poster-img" id="posterImg">
+  </div>
+  <div class="reveal-details">
+    <h2 class="reveal-title glitch red" data-text="MYSTIC HUNT">MYSTIC HUNT</h2>
+    <p class="reveal-tag">Seek. Scan. Solve.</p>
+    <span class="flourish"></span>
+    <div class="info-grid">
+      <div><b>DATE</b><span>10 SEPT 2026</span></div>
+      <div><b>VENUE</b><span>CSE, SVPCET</span></div>
+      <div><b>TEAM</b><span>2–4 Hunters</span></div>
+      <div><b>PRIZE</b><span>₹3000+</span></div>
+    </div>
+    <div class="fees">
+      <div class="fees-label">REGISTRATION</div>
+      <div class="fees-grid"><span>SOLO ₹50</span><span>DUO ₹100</span><span>TRIO ₹150</span><span>SQUAD ₹200</span></div>
+    </div>
+    <a class="cta-primary" href="https://forms.gle/XKHtQAXZiLTi1JfJ7" target="_blank" rel="noopener">
+      <span class="cta-glow"></span><span class="cta-text">REGISTER NOW ➜</span>
+    </a>
+    <a class="cta-secondary" href="https://infinity-2026.vercel.app/" target="_blank" rel="noopener">Visit Infinity 2K26 ↗</a>
+    <button class="replay" id="replay">↻ Try another trial</button>
+  </div>
+  <div class="brand-footer">
+    <div>SVPCET · DEPARTMENT OF COMPUTER SCIENCE & ENGINEERING</div>
+    <div class="footer-sub">CO-ORD: Rishi Walokar · +91 93733 34727 &nbsp; · &nbsp; Dhanshree Hande · +91 75586 45260</div>
+  </div>
+</section>
+
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
