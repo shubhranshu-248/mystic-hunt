@@ -40,7 +40,7 @@ Mystic Hunt/
   2. SEQUENTIAL TYPEWRITER ENTRANCE
      • Zero-flash CSS gating (.seq-el and .seq-trial stay invisible until their step)
      • 10-step synchronized entrance:
-       Brand Line → Infinite Crest → Glitch Title → Tagline → Lore Narrative →
+       Brand Line → Mystic Hunt Sci-Fi Logo → Glitch Title → Tagline → Lore Narrative →
        Live T-Minus Countdown → Meta Strip → Section Label → 4 Trial Cards → Footer
               ↓
   3. CHOOSE ANY OF 4 PROCEDURAL TRIALS

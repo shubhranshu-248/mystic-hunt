@@ -9,7 +9,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Creepster&family=MedievalSharp&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="mystic_hunt_logo.png">
 <link rel="stylesheet" href="style.css">
+<link rel="preload" href="mystic_hunt_logo.png" as="image">
 <link rel="preload" href="music_loop.wav" as="audio">
 <link rel="preload" href="chest_open.wav" as="audio">
 <script>
@@ -132,20 +134,11 @@
       <span class="dot"></span>
     </div>
 
-    <!-- Crest emblem -->
+    <!-- Crest / Mystic Hunt Logo emblem -->
     <div class="crest seq-el" id="seqCrest">
-      <svg viewBox="0 0 120 120">
-        <defs>
-          <radialGradient id="cg1" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#ffd76b"/><stop offset="0.6" stop-color="#ff2e2e"/><stop offset="1" stop-color="#050514"/></radialGradient>
-          <linearGradient id="cg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7ee8ff"/><stop offset="1" stop-color="#6b2fb7"/></linearGradient>
-        </defs>
-        <circle cx="60" cy="60" r="54" fill="none" stroke="url(#cg1)" stroke-width="1.5" opacity="0.6"/>
-        <circle cx="60" cy="60" r="48" fill="none" stroke="url(#cg2)" stroke-width="1.2" stroke-dasharray="4 3" class="crest-ring-1"/>
-        <circle cx="60" cy="60" r="38" fill="none" stroke="url(#cg1)" stroke-width="1.5" stroke-dasharray="6 4" class="crest-ring-2"/>
-        <polygon points="60,18 70,48 102,48 76,66 86,96 60,78 34,96 44,66 18,48 50,48" fill="none" stroke="#ffd76b" stroke-width="1.8"/>
-        <circle cx="60" cy="60" r="14" fill="#050514" stroke="#ffd76b" stroke-width="2"/>
-        <text x="60" y="66" text-anchor="middle" font-size="18" fill="#ffd76b" font-family="Cinzel Decorative" font-weight="900">∞</text>
-      </svg>
+      <div class="crest-wrap">
+        <img src="mystic_hunt_logo.png" alt="Mystic Hunt Logo" class="crest-img" width="301" height="301" loading="eager">
+      </div>
     </div>
 
     <h1 class="title-main seq-el" id="seqTitle">
