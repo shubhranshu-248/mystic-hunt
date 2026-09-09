@@ -29,15 +29,8 @@
     h = canvas.height = window.innerHeight * dpr;
     canvas.style.width = window.innerWidth + 'px';
     canvas.style.height = window.innerHeight + 'px';
-    if(NODES && NODES.length){
-      for(const n of NODES){
-        if(n.x > w) n.x = Math.random() * w;
-        if(n.y > h) n.y = Math.random() * h;
-      }
-    }
   }
-  window.addEventListener('resize', resize, { passive: true });
-  window.addEventListener('orientationchange', () => setTimeout(resize, 150), { passive: true });
+  window.addEventListener('resize', resize);
   resize();
   for(let i = 0; i < N; i++){
     NODES.push({
@@ -106,7 +99,7 @@
    3) COUNTDOWN — live to Sept 10, 2026 09:00 IST
    ================================================================ */
 (function countdown(){
-  const target = new Date('2026-09-10T10:00:00+05:30').getTime();
+  const target = new Date('2026-09-10T09:00:00+05:30').getTime();
   const cd = document.getElementById('countdown');
   const dEl = document.getElementById('cdD');
   const hEl = document.getElementById('cdH');
@@ -140,10 +133,6 @@ const screens = document.querySelectorAll('.screen');
 function show(id){
   screens.forEach(s => s.classList.toggle('on', s.id === id));
   window.scrollTo({ top: 0, behavior: 'smooth' });
-  if(id === 's-chest' && typeof initChestTrial === 'function') initChestTrial();
-  if(id === 's-circuit' && typeof initCircuitTrial === 'function') initCircuitTrial();
-  if(id === 's-sigils' && typeof initSigilsTrial === 'function') initSigilsTrial();
-  if(id === 's-astrolabe' && typeof initAstrolabeTrial === 'function') initAstrolabeTrial();
 }
 document.querySelectorAll('.trial').forEach(t => {
   t.addEventListener('click', () => show(t.dataset.go));
@@ -208,7 +197,7 @@ if(window.matchMedia && window.matchMedia('(pointer: fine)').matches){
 const music = (function(){
   let ctx = null, master = null, comp = null, playing = false;
   let schedulerId = null, nextTime = 0, step = 0;
-  const BPM = 74;                              // energetic mystic tempo
+  const BPM = 68;                              // slow mystic tempo
   const STEP = 60 / BPM / 4;                    // sixteenth-note length in seconds
 
   function ensure(){
@@ -220,42 +209,31 @@ const music = (function(){
       master = ctx.createGain();
       master.gain.value = 0;
       comp = ctx.createDynamicsCompressor();
-      comp.threshold.value = -16;
+      comp.threshold.value = -18;
       comp.knee.value = 8;
-      comp.ratio.value = 4.5;
-      comp.attack.value = 0.004;
-      comp.release.value = 0.14;
+      comp.ratio.value = 5;
+      comp.attack.value = 0.005;
+      comp.release.value = 0.15;
       const lp = ctx.createBiquadFilter();
-      lp.type = 'lowpass'; lp.frequency.value = 4600; lp.Q.value = 0.5;
+      lp.type = 'lowpass'; lp.frequency.value = 4200; lp.Q.value = 0.5;
       master.connect(comp).connect(lp).connect(ctx.destination);
       return true;
     } catch(e){ return false; }
   }
 
   // ---- Sound design ----
-  function kick(t, punch=true){
+  function kick(t){
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = 'sine';
-    o.frequency.setValueAtTime(155, t);
-    o.frequency.exponentialRampToValueAtTime(40, t + 0.16);
-    g.gain.setValueAtTime(punch ? 0.65 : 0.48, t);
-    g.gain.exponentialRampToValueAtTime(0.008, t + 0.32);
+    o.frequency.setValueAtTime(140, t);
+    o.frequency.exponentialRampToValueAtTime(38, t + 0.14);
+    g.gain.setValueAtTime(0.55, t);
+    g.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
     o.connect(g).connect(master);
-    o.start(t); o.stop(t + 0.35);
-
-    // Punch transient click
-    const clickO = ctx.createOscillator(), clickG = ctx.createGain();
-    clickO.type = 'triangle';
-    clickO.frequency.setValueAtTime(950, t);
-    clickO.frequency.exponentialRampToValueAtTime(140, t + 0.018);
-    clickG.gain.setValueAtTime(0.24, t);
-    clickG.gain.exponentialRampToValueAtTime(0.001, t + 0.024);
-    clickO.connect(clickG).connect(master);
-    clickO.start(t); clickO.stop(t + 0.03);
+    o.start(t); o.stop(t + 0.32);
   }
-
   function snare(t){
-    // Crisp noise burst + tuned acoustic body
+    // noise + tuned tone blend
     const dur = 0.18;
     const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
     const d = buf.getChannelData(0);
@@ -263,46 +241,22 @@ const music = (function(){
     const src = ctx.createBufferSource();
     src.buffer = buf;
     const hp = ctx.createBiquadFilter();
-    hp.type = 'highpass'; hp.frequency.value = 1600;
+    hp.type = 'highpass'; hp.frequency.value = 1500;
     const g = ctx.createGain();
-    g.gain.setValueAtTime(0.32, t);
+    g.gain.setValueAtTime(0.28, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     src.connect(hp).connect(g).connect(master);
     src.start(t); src.stop(t + dur);
-
     // Body
     const o = ctx.createOscillator(), og = ctx.createGain();
-    o.type = 'triangle'; o.frequency.value = 210;
-    og.gain.setValueAtTime(0.22, t);
+    o.type = 'triangle'; o.frequency.value = 200;
+    og.gain.setValueAtTime(0.18, t);
     og.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
     o.connect(og).connect(master);
     o.start(t); o.stop(t + 0.15);
   }
-
-  // Rhythmic percussion pops & woodblock clicks
-  function pop(t, pitch=540, gain=0.22){
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = 'sine';
-    o.frequency.setValueAtTime(pitch * 1.7, t);
-    o.frequency.exponentialRampToValueAtTime(pitch, t + 0.045);
-    g.gain.setValueAtTime(gain, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
-    o.connect(g).connect(master);
-    o.start(t); o.stop(t + 0.07);
-
-    // Harmonic click pop
-    const o2 = ctx.createOscillator(), g2 = ctx.createGain();
-    o2.type = 'triangle';
-    o2.frequency.setValueAtTime(pitch * 2.8, t);
-    o2.frequency.exponentialRampToValueAtTime(pitch * 0.9, t + 0.02);
-    g2.gain.setValueAtTime(gain * 0.35, t);
-    g2.gain.exponentialRampToValueAtTime(0.001, t + 0.025);
-    o2.connect(g2).connect(master);
-    o2.start(t); o2.stop(t + 0.03);
-  }
-
-  function hihat(t, open=false, gain=0.08){
-    const dur = open ? 0.14 : 0.04;
+  function hihat(t, open){
+    const dur = open ? 0.14 : 0.05;
     const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
     const d = buf.getChannelData(0);
     for(let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -311,30 +265,28 @@ const music = (function(){
     const hp = ctx.createBiquadFilter();
     hp.type = 'highpass'; hp.frequency.value = 7500;
     const g = ctx.createGain();
-    g.gain.setValueAtTime(open ? gain * 1.4 : gain, t);
+    g.gain.setValueAtTime(open ? 0.13 : 0.09, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     src.connect(hp).connect(g).connect(master);
     src.start(t); src.stop(t + dur);
   }
-
-  function bass(freq, t, dur=0.6, gain=0.34){
-    // Clean triangle bass with sub-sine warmth
+  function bass(freq, t, dur=0.9){
+    // Clean triangle bass (no more sawtooth buzz)
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = 'triangle'; o.frequency.value = freq;
     const f = ctx.createBiquadFilter();
-    f.type = 'lowpass'; f.frequency.value = 380;
+    f.type = 'lowpass'; f.frequency.value = 400;
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(gain, t + 0.02);
-    g.gain.linearRampToValueAtTime(gain * 0.65, t + dur * 0.6);
+    g.gain.linearRampToValueAtTime(0.30, t + 0.02);
+    g.gain.linearRampToValueAtTime(0.18, t + dur * 0.6);
     g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     o.connect(f).connect(g).connect(master);
     o.start(t); o.stop(t + dur);
-
-    // Warm sub-sine
+    // Add a soft sine sub-octave for warmth (no buzz)
     const o2 = ctx.createOscillator(), g2 = ctx.createGain();
     o2.type = 'sine'; o2.frequency.value = freq / 2;
     g2.gain.setValueAtTime(0, t);
-    g2.gain.linearRampToValueAtTime(gain * 0.65, t + 0.02);
+    g2.gain.linearRampToValueAtTime(0.20, t + 0.02);
     g2.gain.exponentialRampToValueAtTime(0.001, t + dur);
     o2.connect(g2).connect(master);
     o2.start(t); o2.stop(t + dur);
@@ -494,41 +446,23 @@ const music = (function(){
     const inBar = s % 16;                // 0..15
 
     // KICK — beat 1 and syncopated "3.5" for groove
-    if(inBar === 0)  kick(t, true);
-    if(inBar === 10) kick(t, false);
-
-    // SNARE / RIM-CLAP — beats 2 and 4
+    if(inBar === 0)  kick(t);
+    if(inBar === 10) kick(t);
+    // SNARE — beats 2 and 4
     if(inBar === 4 || inBar === 12) snare(t);
-
-    // RHYTHMIC PERCUSSION POPS & BUBBLES (Enhanced as requested: "beats...pops etc")
-    if(inBar === 3)  pop(t, 460, 0.20);             // low bubble pop
-    if(inBar === 7)  pop(t, 780, 0.24);             // bright woodblock pop
-    if(inBar === 11) pop(t, 580, 0.22);             // acoustic mid pop
-    if(inBar === 14) pop(t, 880, 0.26);             // high syncopated pop
-    if(inBar === 15) pop(t + STEP * 0.45, 960, 0.16); // pickup bounce
-
-    // HI-HATS — groove with dynamic velocity
-    if(inBar === 2 || inBar === 6 || inBar === 10) hihat(t, false, 0.08);
-    if(inBar === 8)  hihat(t, false, 0.11);
-    if(inBar === 14) hihat(t, true, 0.13); // open hat into next bar
-
-    // BASS GROOVE — walking root & harmonic octave bounce
-    if(inBar === 0)  bass(BASS[bar], t, STEP * 5, 0.36);
-    if(inBar === 8)  bass(BASS[bar] * 1.5, t, STEP * 3, 0.26);
-    if(inBar === 12) bass(BASS[bar], t, STEP * 2.5, 0.22);
-
-    // ARPEGGIO — shimmering celestial 16th-note layer
+    // HI-HAT — softer, less "tss" (skip the ones the melody sits on)
+    if(inBar === 2 || inBar === 6 || inBar === 10 || inBar === 14) hihat(t, false);
+    // BASS — on beat 1 (root of chord)
+    if(inBar === 0)  bass(BASS[bar], t, 1.6);
+    // ARPEGGIO — every 2nd sixteenth, gentle background
     if(inBar % 2 === 0){
-      const arpNote = ARP[bar][(inBar / 2) % 8];
+      const arpNote = ARP[bar][inBar / 2 % 8];
       arp(arpNote, t);
     }
-
-    // PAD chord — start of every bar, lush sustain
-    if(inBar === 0) pad(CHORDS[bar], 3.6, t);
-
+    // PAD chord — start of every bar, held 3.5 seconds
+    if(inBar === 0) pad(CHORDS[bar], 3.5, t);
     // BELL — occasional atmospheric chime
-    if(inBar === 0 && (bar === 0 || bar === 2)) bell(t + 0.08);
-    if(Math.random() < 0.03) bell(t + Math.random() * STEP * 3);
+    if(Math.random() < 0.025) bell(t + Math.random() * STEP * 4);
   }
 
   function scheduler(){
@@ -598,104 +532,17 @@ const music = (function(){
     o.connect(g).connect(master);
     o.start(t); o.stop(t + 0.7);
   }
-  // Authentic sound effects via Web Audio / Audio element
-  function mechanicalClick(){
-    if(!ensure()) return;
-    if(ctx.state === 'suspended'){ try { ctx.resume(); } catch(e){} }
-    const t = ctx.currentTime;
-    const o = ctx.createOscillator(), g = ctx.createGain();
-    o.type = 'triangle';
-    o.frequency.setValueAtTime(2800, t);
-    o.frequency.exponentialRampToValueAtTime(800, t + 0.035);
-    g.gain.setValueAtTime(0.28, t);
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-    o.connect(g).connect(master);
-    o.start(t); o.stop(t + 0.045);
-  }
-
-  return { start, stop, isPlaying: () => playing, gameTone, errorTone, mechanicalClick, ensureContext: ensure };
+  return { start, stop, isPlaying: () => playing, chestOpenFX, gameTone, errorTone };
 })();
 
-/* ================================================================
-   6B) MASTER AUDIO CONTROLLER (Plays immediately by default)
-   ================================================================ */
-const bgMusic = document.getElementById('bgMusic');
 const musicBtn = document.getElementById('musicBtn');
-let userMuted = false;
-
-if(bgMusic){
-  bgMusic.volume = 0.9;
-  bgMusic.addEventListener('playing', () => {
-    if(!userMuted) musicBtn.classList.add('playing');
-  });
-  bgMusic.addEventListener('pause', () => {
-    if(userMuted) musicBtn.classList.remove('playing');
-  });
-}
-
-// Authentic chest opening sound player (pure realistic Foley sound effect, no tune)
-const chestAudio = new Audio('chest_open.wav');
-chestAudio.preload = 'auto';
-function playChestOpenSound(){
-  try {
-    chestAudio.currentTime = 0;
-    const p = chestAudio.play();
-    if(p && p.catch) p.catch(() => {});
-  } catch(e){}
-}
-
-// Start or resume master music immediately
-function tryStartMusic(){
-  if(userMuted || !bgMusic) return;
-  if(bgMusic.paused){
-    const p = bgMusic.play();
-    if(p && p.then){
-      p.then(() => {
-        musicBtn.classList.add('playing');
-      }).catch(() => {
-        // Waiting for first user gesture per browser policy
-      });
-    }
-  }
-  // Resume Web Audio context for instant sound effects
-  if(music && music.ensureContext){
-    music.ensureContext();
-  }
-}
-
-// Toggle audio on/off via floating equalizer pill
 musicBtn.addEventListener('click', (e) => {
   e.stopPropagation();
-  if(!bgMusic) return;
-  if(!bgMusic.paused){
-    userMuted = true;
-    bgMusic.pause();
+  if(music.isPlaying()){
+    music.stop();
     musicBtn.classList.remove('playing');
   } else {
-    userMuted = false;
-    const p = bgMusic.play();
-    if(p && p.then){
-      p.then(() => {
-        musicBtn.classList.add('playing');
-      }).catch(() => {});
-    }
-  }
-});
-
-// Start immediately on script execution, DOM ready, and window load
-tryStartMusic();
-document.addEventListener('DOMContentLoaded', tryStartMusic);
-window.addEventListener('load', () => setTimeout(tryStartMusic, 50));
-
-// Instant gesture listeners on any interaction across the entire window
-['pointerdown', 'touchstart', 'mousedown', 'pointermove', 'mousemove', 'keydown', 'wheel', 'scroll', 'click'].forEach(ev => {
-  document.addEventListener(ev, tryStartMusic, { passive: true });
-});
-
-// If user switches tabs and comes back, ensure audio resumes if unmuted
-document.addEventListener('visibilitychange', () => {
-  if(!document.hidden && !userMuted && bgMusic && bgMusic.paused){
-    tryStartMusic();
+    if(music.start()) musicBtn.classList.add('playing');
   }
 });
 
@@ -704,70 +551,75 @@ document.addEventListener('visibilitychange', () => {
    7) CHEST LOADER — click to open, unlocks audio, starts typewriter
    ================================================================ */
 const chestLoader = document.getElementById('chestLoader');
-const clChest = document.getElementById('clChest');
-const clHint = document.getElementById('clHint');
 let hasEntered = false;
+
+// Try to start ambient music the moment the user does ANYTHING on the loader
+// (mouse move, touch, key press, scroll). This means music kicks in while the
+// user is still looking at the chest, not only after they click it.
+function tryStartMusicSilently(){
+  if(!music.isPlaying()){
+    if(music.start()) musicBtn.classList.add('playing');
+  }
+}
+['mousemove', 'touchstart', 'pointermove', 'keydown', 'scroll', 'wheel'].forEach(ev => {
+  document.addEventListener(ev, tryStartMusicSilently, { once: true, passive: true });
+});
+// Attempt immediate autoplay in case the browser allows it (Firefox often does)
+window.addEventListener('load', () => setTimeout(tryStartMusicSilently, 100));
+
+// Snapshot every data-type element's raw text once, up-front, so a safety
+// fallback can always restore what the typewriter cleared.
+document.querySelectorAll('[data-type]').forEach(el => {
+  el.dataset.raw = el.textContent;
+});
 
 function enterExperience(){
   if(hasEntered) return;
   hasEntered = true;
-
-  // 1) Ensure master music is playing (groove continues seamlessly)
-  tryStartMusic();
-
-  // 2) Pure sound effect: exact heavy wooden chest opening (no bells, no tunes)
-  playChestOpenSound();
-
-  // 3) Play chest open animation
+  // 1) Ambient music (in case it hasn't started yet from mousemove/etc.)
+  music.start();
+  musicBtn.classList.add('playing');
+  // 2) BIG chest-opening sound effect: bass drop + creak + click + whoosh + bells
+  music.chestOpenFX();
+  // 3) Play chest-open animation
   chestLoader.classList.add('opening');
-
-  // 4) Fade out loader
-  setTimeout(() => chestLoader.classList.add('gone'), 1200);
-  setTimeout(() => chestLoader.remove(), 2100);
-
-  // 5) Start one-by-one sequential reveal
-  setTimeout(runTypewriter, 900);
+  // 4) Fade out loader after ~1.4s (mid-animation) so the site starts revealing
+  setTimeout(() => chestLoader.classList.add('gone'), 1400);
+  setTimeout(() => chestLoader.remove(), 2400);
+  // 5) Kick off typewriter after loader begins fading
+  setTimeout(runTypewriter, 1000);
+  // 6) SAFETY FALLBACK — no matter what, ensure ALL text is visible after 15s
+  setTimeout(() => {
+    document.querySelectorAll('[data-type]').forEach(el => {
+      if((!el.textContent || !el.textContent.trim()) && el.dataset.raw){
+        el.textContent = el.dataset.raw;
+      }
+    });
+    document.querySelectorAll('[data-type-glitch]').forEach(el => {
+      if((!el.textContent || !el.textContent.trim()) && el.dataset.typeGlitch){
+        el.textContent = el.dataset.typeGlitch;
+        el.setAttribute('data-text', el.dataset.typeGlitch);
+      }
+    });
+  }, 15000);
 }
-
-// STRICT CHEST CLICK: Only open when user taps the chest itself!
-if(clChest){
-  clChest.addEventListener('click', (e) => {
-    e.stopPropagation();
-    enterExperience();
-  });
-}
-if(chestLoader){
-  chestLoader.addEventListener('click', (e) => {
-    if(hasEntered) return;
-    tryStartMusic();
-    if(e.target.closest('#clChest')) return;
-    // Clicked outside chest: give visual hint and wobble
-    if(clChest){
-      clChest.classList.remove('wobble');
-      void clChest.offsetWidth;
-      clChest.classList.add('wobble');
-    }
-    if(clHint){
-      clHint.classList.add('alert');
-      clHint.textContent = '✦ TAP DIRECTLY ON THE CHEST ✦';
-      setTimeout(() => {
-        clHint.classList.remove('alert');
-        clHint.textContent = '✦ TAP DIRECTLY ON THE CHEST ✦';
-      }, 750);
-    }
-  });
-}
+chestLoader.addEventListener('click', enterExperience);
+// Also unlock on any key press (accessibility)
+document.addEventListener('keydown', () => { enterExperience(); }, { once: true });
 
 
 /* ================================================================
-   8) TYPEWRITER — Sequential One-By-One Reveal
+   8) TYPEWRITER — reads original text, retypes into empty element
    ================================================================ */
-function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-
-function typeTextInto(el, text, speed=35){
+function typeText(el, opts={}){
+  const text = el.dataset.raw || el.textContent;
+  el.dataset.raw = text;
+  const speed = opts.speed || 40;
   el.textContent = '';
+  el.style.visibility = 'visible';
   el.classList.add('typing');
   return new Promise(resolve => {
+    if(!text){ el.classList.remove('typing'); resolve(); return; }
     let i = 0;
     const iv = setInterval(() => {
       el.textContent = text.slice(0, i + 1);
@@ -777,15 +629,17 @@ function typeTextInto(el, text, speed=35){
         setTimeout(() => {
           el.classList.remove('typing');
           resolve();
-        }, 80);
+        }, opts.hold || 120);
       }
     }, speed);
   });
 }
-
-function typeGlitchInto(el, text, speed=100){
+function typeGlitch(el, opts={}){
+  const text = el.dataset.typeGlitch || '';
+  const speed = opts.speed || 130;
   el.textContent = '';
   el.setAttribute('data-text', '');
+  el.style.visibility = 'visible';
   el.classList.add('typing');
   return new Promise(resolve => {
     let i = 0;
@@ -799,108 +653,44 @@ function typeGlitchInto(el, text, speed=100){
         setTimeout(() => {
           el.classList.remove('typing');
           resolve();
-        }, 120);
+        }, opts.hold || 200);
       }
     }, speed);
   });
 }
 
 async function runTypewriter(){
-  const seqBrand = document.getElementById('seqBrand');
-  const brandTxt = document.getElementById('brandTxt');
-  const seqCrest = document.getElementById('seqCrest');
-  const seqTitle = document.getElementById('seqTitle');
-  const titleMystic = document.getElementById('titleMystic');
-  const titleHunt = document.getElementById('titleHunt');
-  const seqTagline = document.getElementById('seqTagline');
-  const seqLead = document.getElementById('seqLead');
-  const countdown = document.getElementById('countdown');
-  const seqMeta = document.getElementById('seqMeta');
-  const seqLabel = document.getElementById('seqLabel');
-  const sectionLabelTxt = document.getElementById('sectionLabelTxt');
-  const trials = document.querySelectorAll('.trials .seq-trial');
-  const seqFoot = document.getElementById('seqFoot');
+  const brand = document.querySelector('.brand-txt[data-type]');
+  const t1    = document.querySelector('.title-main .glitch:not(.red)');
+  const t2    = document.querySelector('.title-main .glitch.red');
+  const tag   = document.querySelector('.tagline[data-type]');
+  const lead  = document.querySelector('.lead[data-type]');
+  const label = document.querySelector('.section-label span[data-type]');
 
-  // Step 1: Brand line drops down & types
-  if(seqBrand && brandTxt){
-    seqBrand.classList.add('seq-show');
-    await typeTextInto(brandTxt, brandTxt.dataset.seqText || '', 40);
-    await sleep(140);
+  // Wrap in try/catch so any failure never leaves the page blank.
+  try {
+    if(brand) await typeText(brand,  { speed: 55, hold: 200 });
+    if(t1)    await typeGlitch(t1,   { speed: 150, hold: 250 });
+    if(t2)    await typeGlitch(t2,   { speed: 150, hold: 250 });
+    if(tag)   await typeText(tag,    { speed: 90, hold: 250 });
+    if(lead)  await typeText(lead,   { speed: 32, hold: 200 });
+    if(label) await typeText(label,  { speed: 70, hold: 100 });
+  } catch(e){
+    // Fallback: if anything goes wrong, restore every text element instantly.
+    [brand, tag, lead, label].forEach(el => { if(el && el.dataset.raw) el.textContent = el.dataset.raw; });
+    if(t1) { t1.textContent = t1.dataset.typeGlitch || ''; t1.setAttribute('data-text', t1.textContent); }
+    if(t2) { t2.textContent = t2.dataset.typeGlitch || ''; t2.setAttribute('data-text', t2.textContent); }
   }
-
-  // Step 2: Crest scales in
-  if(seqCrest){
-    seqCrest.classList.add('seq-show');
-    await sleep(220);
-  }
-
-  // Step 3: Title emerges & types
-  if(seqTitle){
-    seqTitle.classList.add('seq-show');
-    if(titleMystic){
-      await typeGlitchInto(titleMystic, titleMystic.dataset.seqGlitch || '', 110);
-    }
-    if(titleHunt){
-      await typeGlitchInto(titleHunt, titleHunt.dataset.seqGlitch || '', 110);
-    }
-    await sleep(160);
-  }
-
-  // Step 4: Tagline types
-  if(seqTagline){
-    seqTagline.classList.add('seq-show');
-    await typeTextInto(seqTagline, seqTagline.dataset.seqText || '', 60);
-    await sleep(130);
-  }
-
-  // Step 5: Lead narrative types
-  if(seqLead){
-    seqLead.classList.add('seq-show');
-    await typeTextInto(seqLead, seqLead.dataset.seqText || '', 24);
-    await sleep(160);
-  }
-
-  // Step 6: Countdown drops down
-  if(countdown){
-    countdown.classList.add('seq-show');
-    await sleep(140);
-  }
-
-  // Step 7: Meta strip slides up
-  if(seqMeta){
-    seqMeta.classList.add('seq-show');
-    await sleep(160);
-  }
-
-  // Step 8: Section label types
-  if(seqLabel && sectionLabelTxt){
-    seqLabel.classList.add('seq-show');
-    await typeTextInto(sectionLabelTxt, sectionLabelTxt.dataset.seqText || '', 45);
-    await sleep(130);
-  }
-
-  // Step 9: 4 Trial cards cascade into place one by one
-  for(let i = 0; i < trials.length; i++){
-    trials[i].classList.add('seq-show');
-    await sleep(140);
-  }
-
-  // Step 10: Footer signature
-  if(seqFoot){
-    seqFoot.classList.add('seq-show');
-  }
+  document.body.classList.add('typewriter-done');
 }
 
 
 /* ================================================================
-   9) TRIAL 1 — THE CHEST  (Wordle / Mastermind Number Guessing)
+   9) TRIAL 1 — CHEST  (random code, reveals answer on lose)
    ================================================================ */
-let initChestTrial = null;
-(function chestModule(){
+(function chest(){
   const CODE_LEN = 4, MAX_TRIES = 6, TIME_LIMIT = 60;
-  let secret = [], entry = [], triesLeft = MAX_TRIES, timeLeft = TIME_LIMIT, timerId = null, done = false;
-  let wired = false;
-
+  let secret = genCode(), entry = [], triesLeft = MAX_TRIES, timeLeft = TIME_LIMIT, timerId = null, done = false;
   const digits = document.querySelectorAll('#codebox .digit');
   const historyEl = document.getElementById('history');
   const triesEl = document.getElementById('tries');
@@ -908,14 +698,12 @@ let initChestTrial = null;
   const hintEl = document.getElementById('chestHint');
   const tryBtn = document.getElementById('tryBtn');
   const chestEl = document.getElementById('chest');
-  const keypad = document.getElementById('keypad');
 
   function genCode(){
     const pool = [1,2,3,4,5,6,7,8,9], out = [];
     for(let i = 0; i < CODE_LEN; i++) out.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     return out;
   }
-
   function render(){
     digits.forEach((d, i) => {
       d.textContent = entry[i] ?? '';
@@ -924,7 +712,6 @@ let initChestTrial = null;
     });
     tryBtn.disabled = entry.length !== CODE_LEN || done;
   }
-
   function score(g){
     const r = new Array(CODE_LEN).fill('grey'), used = new Array(CODE_LEN).fill(false);
     for(let i = 0; i < CODE_LEN; i++) if(g[i] === secret[i]){ r[i] = 'green'; used[i] = true; }
@@ -936,7 +723,6 @@ let initChestTrial = null;
     }
     return r;
   }
-
   function addRow(g, s){
     const row = document.createElement('div'); row.className = 'attempt';
     g.forEach((n, i) => {
@@ -946,7 +732,6 @@ let initChestTrial = null;
     historyEl.appendChild(row);
     while(historyEl.children.length > 4) historyEl.removeChild(historyEl.firstChild);
   }
-
   function submit(){
     if(entry.length !== CODE_LEN || done) return;
     const g = entry.slice(), s = score(g);
@@ -956,13 +741,11 @@ let initChestTrial = null;
     entry = []; render();
     chestEl.classList.add('shake');
     setTimeout(() => chestEl.classList.remove('shake'), 400);
-    music.errorTone();
     if(triesLeft <= 0) loseWithAnswer("Out of attempts.");
-    else hintEl.textContent = triesLeft === 1 ? "Last try! Read the runes carefully…" : "Not yet. Study the green & amber clues.";
+    else hintEl.textContent = triesLeft === 1 ? "Last try! Read the runes carefully…" : "Not yet. Study the colors.";
   }
-
   function startTimer(){
-    clearInterval(timerId);
+    if(timerId) return;
     timerId = setInterval(() => {
       timeLeft--;
       const m = String(Math.floor(timeLeft / 60)).padStart(2, '0');
@@ -972,16 +755,11 @@ let initChestTrial = null;
       if(timeLeft <= 0){ clearInterval(timerId); loseWithAnswer("Time's up."); }
     }, 1000);
   }
-
   function win(){
     done = true; clearInterval(timerId);
-    chestEl.classList.add('open'); hintEl.textContent = "The chest opens… The mystery is unsealed!";
-    music.gameTone(523, 0.4);
-    setTimeout(() => music.gameTone(659, 0.4), 150);
-    setTimeout(() => music.gameTone(784, 0.6), 300);
+    chestEl.classList.add('open'); hintEl.textContent = "The chest opens…";
     setTimeout(() => completeTrial(0), 900);
   }
-
   function loseWithAnswer(prefix){
     done = true; clearInterval(timerId); screenFlash();
     digits.forEach((d, i) => {
@@ -996,342 +774,202 @@ let initChestTrial = null;
       setTimeout(() => completeTrial(0), 700);
     }, 3200);
   }
-
-  initChestTrial = function(){
-    clearInterval(timerId);
-    timerId = null;
-    secret = genCode();
-    entry = [];
-    triesLeft = MAX_TRIES;
-    timeLeft = TIME_LIMIT;
-    done = false;
-
-    historyEl.innerHTML = '';
-    triesEl.textContent = String(MAX_TRIES);
-    timerEl.textContent = '01:00';
-    timerEl.classList.remove('low');
-    hintEl.classList.remove('reveal-answer');
-    hintEl.textContent = 'Enter 4 digits, tap the rune ✦';
-    chestEl.classList.remove('open', 'shake');
-
-    digits.forEach(d => {
-      d.textContent = '';
-      d.classList.remove('filled', 'revealed', 'active');
-    });
-
-    render();
-    startTimer();
-
-    if(!wired){
-      wired = true;
-      keypad.addEventListener('click', (e) => {
-        const btn = e.target.closest('.key');
-        if(!btn || done) return;
-        const k = btn.dataset.k;
-        music.mechanicalClick();
-        if(k === 'clear'){ entry.pop(); render(); }
-        else if(k === 'try'){ submit(); }
-        else if(entry.length < CODE_LEN && !entry.includes(Number(k))){
-          entry.push(Number(k)); render();
-        }
-      });
-      document.addEventListener('keydown', (e) => {
-        const stage = document.getElementById('s-chest');
-        if(!stage || !stage.classList.contains('on') || done) return;
-        if(e.key >= '1' && e.key <= '9'){
-          const n = Number(e.key);
-          if(entry.length < CODE_LEN && !entry.includes(n)){
-            music.mechanicalClick(); entry.push(n); render();
-          }
-        } else if(e.key === 'Backspace'){
-          music.mechanicalClick(); entry.pop(); render();
-        } else if(e.key === 'Enter'){
-          music.mechanicalClick(); submit();
-        }
-      });
-    }
-  };
+  document.getElementById('keypad').addEventListener('click', (e) => {
+    const b = e.target.closest('.key'); if(!b || done) return;
+    const k = b.dataset.k; startTimer();
+    if(k === 'clear'){ entry = []; render(); return; }
+    if(k === 'try'){ submit(); return; }
+    if(entry.length < CODE_LEN){ entry.push(Number(k)); render(); }
+  });
+  render();
 })();
 
 
 /* ================================================================
-   10) TRIAL 2 — THE ASTRAL CIRCUIT  (Conduit Power Routing)
+   10) TRIAL 2 — MAP  (random every load, 4 diffs, tight targets)
    ================================================================ */
-let initCircuitTrial = null;
-(function circuitModule(){
+(function mapTrial(){
   const TIME_LIMIT = 60;
-  const stage = document.getElementById('s-circuit');
-  const gridEl = document.getElementById('circuitGrid');
-  const voltEl = document.getElementById('circuitVoltage');
-  const statEl = document.getElementById('circuitStatus');
-  const timerEl = document.getElementById('circuitTimer');
-  const hintEl = document.getElementById('circuitHint');
-  const endTerm = document.getElementById('circuitEndTerm');
+  const NUM_DIFFS = 4;
+  const HIT_RADIUS = 9;
 
-  // Bitmasks: N=1, E=2, S=4, W=8
-  let grid = []; // 16 cells: { r, c, baseMask, rot, powered, element }
-  let timerId = null, timeLeft = TIME_LIMIT, done = false;
+  const ELEMENTS = [
+    { id: 'star',    draw: (x,y) => `<g transform="translate(${x},${y})"><polygon points="0,-8 2,-2 8,-1 3,3 5,10 0,6 -5,10 -3,3 -8,-1 -2,-2" fill="#e8c987"/></g>` },
+    { id: 'skull',   draw: (x,y) => `<g transform="translate(${x},${y})"><ellipse rx="9" ry="8" fill="#3a2410"/><circle cx="-3" cy="-1" r="2" fill="#e8c987"/><circle cx="3" cy="-1" r="2" fill="#e8c987"/><rect x="-1.5" y="3" width="1" height="4" fill="#e8c987"/><rect x="0.5" y="3" width="1" height="4" fill="#e8c987"/></g>` },
+    { id: 'x',       draw: (x,y) => `<g transform="translate(${x},${y})"><line x1="-7" y1="-7" x2="7" y2="7" stroke="#c51111" stroke-width="3"/><line x1="7" y1="-7" x2="-7" y2="7" stroke="#c51111" stroke-width="3"/></g>` },
+    { id: 'tree',    draw: (x,y) => `<g transform="translate(${x},${y})"><circle r="7" fill="#2a3e1a"/><rect x="-1" y="5" width="2" height="7" fill="#3a2410"/></g>` },
+    { id: 'gem',     draw: (x,y) => `<g transform="translate(${x},${y})"><polygon points="0,-7 5,0 0,7 -5,0" fill="#7ee8ff" opacity="0.85"/><polygon points="0,-7 5,0 -5,0" fill="#fff" opacity="0.4"/></g>` },
+    { id: 'feather', draw: (x,y) => `<g transform="translate(${x},${y})"><path d="M 0 -8 Q 4 -4 4 4 Q 2 8 0 8 Q -2 8 -4 4 Q -4 -4 0 -8" fill="#6B2FBB"/><line x1="0" y1="-6" x2="0" y2="8" stroke="#000" stroke-width="0.5"/></g>` },
+    { id: 'moon',    draw: (x,y) => `<g transform="translate(${x},${y})"><path d="M -5 -6 Q 5 -6 5 4 Q 0 -1 -5 4 Z" fill="#efe6cf"/></g>` },
+    { id: 'anchor',  draw: (x,y) => `<g transform="translate(${x},${y})"><circle cx="0" cy="-6" r="2" fill="none" stroke="#3a2410" stroke-width="1.5"/><line x1="0" y1="-4" x2="0" y2="6" stroke="#3a2410" stroke-width="1.5"/><path d="M -5 4 Q 0 8 5 4" stroke="#3a2410" stroke-width="1.5" fill="none"/></g>` },
+  ];
 
-  function rotateMask(mask, rot){
-    let m = mask;
-    for(let i = 0; i < (rot % 4); i++){
-      m = ((m << 1) & 15) | ((m & 8) ? 1 : 0);
+  const mapA = document.getElementById('mapA');
+  const mapB = document.getElementById('mapB');
+  const foundEl = document.getElementById('mapFound');
+  const totalEl = document.getElementById('mapTotal');
+  const timerEl = document.getElementById('mapTimer');
+  const hintEl = document.getElementById('mapHint');
+
+  let found = new Set(), done = false, timeLeft = TIME_LIMIT, timerId = null;
+  let diffMap = {}, placements = [];
+
+  function randPos(){ return { x: 15 + Math.random() * 70, y: 12 + Math.random() * 76 }; }
+  function dist(a, b){ const dx = a.x - b.x, dy = a.y - b.y; return Math.sqrt(dx * dx + dy * dy); }
+  function farRandomPos(fromList, min = 25){
+    for(let tries = 0; tries < 30; tries++){
+      const p = randPos();
+      if(fromList.every(o => dist(o, p) >= min)) return p;
     }
-    return m;
+    return randPos();
+  }
+  function generate(){
+    const shuffled = [...ELEMENTS].sort(() => Math.random() - 0.5);
+    const chosen = shuffled.slice(0, 7 + Math.floor(Math.random() * 2));
+    placements = []; diffMap = {};
+    const usedPos = [];
+    chosen.forEach(el => {
+      const p = farRandomPos(usedPos, 22);
+      usedPos.push(p);
+      placements.push({ el, x: p.x, y: p.y });
+    });
+    const diffChoices = [...placements].sort(() => Math.random() - 0.5).slice(0, NUM_DIFFS);
+    diffChoices.forEach(pl => {
+      const roll = Math.random();
+      let kind, bPos = { x: pl.x, y: pl.y };
+      if(roll < 0.6){ kind = 'shift'; bPos = farRandomPos([...usedPos, pl], 28); }
+      else if(roll < 0.8){ kind = 'missB'; }
+      else { kind = 'missA'; }
+      diffMap[pl.el.id] = { a: { x: pl.x, y: pl.y }, b: bPos, kind };
+    });
+    totalEl.textContent = NUM_DIFFS;
   }
 
-  function createTileSvg(mask){
-    const N = !!(mask & 1);
-    const E = !!(mask & 2);
-    const S = !!(mask & 4);
-    const W = !!(mask & 8);
-    let d = '';
-    if(N) d += 'M 25 25 L 25 0 ';
-    if(E) d += 'M 25 25 L 50 25 ';
-    if(S) d += 'M 25 25 L 25 50 ';
-    if(W) d += 'M 25 25 L 0 25 ';
-
+  function svgWrap(inner, which){
+    const isA = which === 'a';
     return `
-      <svg viewBox="0 0 50 50">
-        <path class="pipe-bg" d="${d}"/>
-        <path class="pipe-core" d="${d}"/>
-        <circle cx="25" cy="25" r="4.5" fill="#ffd76b" opacity="0.8"/>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <linearGradient id="parch-${which}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8c987"/><stop offset="1" stop-color="#a8804a"/></linearGradient>
+          <radialGradient id="pspot-${which}" cx="0.5" cy="0.5" r="0.7"><stop offset="0" stop-color="rgba(255,220,140,0.3)"/><stop offset="1" stop-color="rgba(60,30,5,0.5)"/></radialGradient>
+          <filter id="grime-${which}"><feTurbulence baseFrequency="0.9" numOctaves="2" seed="${isA ? 3 : 7}" /><feColorMatrix values="0 0 0 0 0.3  0 0 0 0 0.15  0 0 0 0 0.05  0 0 0 0.18 0"/><feComposite in2="SourceGraphic" operator="in"/></filter>
+        </defs>
+        <rect width="100" height="100" fill="url(#parch-${which})"/>
+        <rect width="100" height="100" fill="url(#pspot-${which})" opacity="0.6"/>
+        <rect width="100" height="100" filter="url(#grime-${which})" opacity="0.6"/>
+        <path d="M 0 0 L 6 3 L 4 7 L 9 10 L 3 15 L 0 13 Z" fill="#3a2410"/>
+        <path d="M 100 100 L 94 97 L 96 93 L 91 90 L 97 85 L 100 87 Z" fill="#3a2410"/>
+        <path d="M 15 30 Q 45 45 55 65 Q 65 80 85 82" stroke="#8a2a10" stroke-width="0.8" stroke-dasharray="1.5 2" fill="none"/>
+        ${inner}
+        <rect x="1" y="1" width="98" height="98" fill="none" stroke="#3a2410" stroke-width="0.6" stroke-dasharray="3 1.5"/>
       </svg>
     `;
   }
-
-  function generateSolvableMaze(){
-    let path = [{ r: 0, c: 0 }];
-    let visited = new Set(['0,0']);
-    let curr = { r: 0, c: 0 };
-
-    while(curr.r !== 3 || curr.c !== 3){
-      const deltas = [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
-      const candidates = [];
-      for(const d of deltas){
-        const nr = curr.r + d.dr, nc = curr.c + d.dc;
-        if(nr >= 0 && nr < 4 && nc >= 0 && nc < 4 && !visited.has(`${nr},${nc}`)){
-          candidates.push({ r: nr, c: nc });
-        }
-      }
-      if(candidates.length === 0){
-        return generateSolvableMaze();
-      }
-      candidates.sort((a, b) => {
-        const da = Math.abs(3 - a.r) + Math.abs(3 - a.c);
-        const db = Math.abs(3 - b.r) + Math.abs(3 - b.c);
-        return (da - db) + (Math.random() - 0.5) * 2;
+  function render(){
+    const buildInner = which => {
+      const isA = which === 'a';
+      let out = '';
+      placements.forEach(pl => {
+        const diff = diffMap[pl.el.id];
+        if(!diff){ out += pl.el.draw(pl.x, pl.y); return; }
+        if(diff.kind === 'shift'){ out += pl.el.draw(isA ? diff.a.x : diff.b.x, isA ? diff.a.y : diff.b.y); }
+        else if(diff.kind === 'missB'){ if(isA) out += pl.el.draw(diff.a.x, diff.a.y); }
+        else if(diff.kind === 'missA'){ if(!isA) out += pl.el.draw(diff.b.x, diff.b.y); }
       });
-      curr = candidates[0];
-      visited.add(`${curr.r},${curr.c}`);
-      path.push(curr);
-    }
-
-    const cells = [];
-    const pathSet = new Map();
-    path.forEach((p, idx) => pathSet.set(`${p.r},${p.c}`, idx));
-
-    const DIRS = {
-      '-1,0': 1, // North
-      '0,1':  2, // East
-      '1,0':  4, // South
-      '0,-1': 8  // West
+      return out;
     };
-
-    for(let r = 0; r < 4; r++){
-      for(let c = 0; c < 4; c++){
-        const key = `${r},${c}`;
-        let baseMask = 0;
-        if(pathSet.has(key)){
-          const idx = pathSet.get(key);
-          if(idx === 0){
-            baseMask |= 8; // West
-          } else {
-            const prev = path[idx - 1];
-            baseMask |= DIRS[`${prev.r - r},${prev.c - c}`];
-          }
-          if(idx === path.length - 1){
-            baseMask |= 2; // East
-          } else {
-            const next = path[idx + 1];
-            baseMask |= DIRS[`${next.r - r},${next.c - c}`];
-          }
-        } else {
-          const presets = [3, 6, 12, 9, 5, 10, 7, 11];
-          baseMask = presets[Math.floor(Math.random() * presets.length)];
-        }
-
-        const rot = Math.floor(Math.random() * 3) + 1;
-        cells.push({ r, c, baseMask, rot, powered: false, element: null });
-      }
-    }
-    return cells;
+    mapA.innerHTML = svgWrap(buildInner('a'), 'a');
+    mapB.innerHTML = svgWrap(buildInner('b'), 'b');
   }
 
-  function updatePowerFlow(){
-    grid.forEach(cell => cell.powered = false);
-
-    const startCell = grid[0];
-    const startEff = rotateMask(startCell.baseMask, startCell.rot);
-    if(startEff & 8){
-      startCell.powered = true;
-      const queue = [startCell];
-      const visited = new Set(['0,0']);
-      const OPPOSITE = { 1: 4, 2: 8, 4: 1, 8: 2 };
-      const DIRS = [
-        { dir: 1, dr: -1, dc: 0 },
-        { dir: 2, dr: 0, dc: 1 },
-        { dir: 4, dr: 1, dc: 0 },
-        { dir: 8, dr: 0, dc: -1 }
-      ];
-
-      while(queue.length > 0){
-        const curr = queue.shift();
-        const currEff = rotateMask(curr.baseMask, curr.rot);
-        for(const d of DIRS){
-          if(currEff & d.dir){
-            const nr = curr.r + d.dr, nc = curr.c + d.dc;
-            if(nr >= 0 && nr < 4 && nc >= 0 && nc < 4){
-              const key = `${nr},${nc}`;
-              if(!visited.has(key)){
-                const neighbor = grid[nr * 4 + nc];
-                const neighborEff = rotateMask(neighbor.baseMask, neighbor.rot);
-                if(neighborEff & OPPOSITE[d.dir]){
-                  neighbor.powered = true;
-                  visited.add(key);
-                  queue.push(neighbor);
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    let poweredCount = 0;
-    grid.forEach(cell => {
-      if(cell.element){
-        cell.element.classList.toggle('powered', cell.powered);
-        if(cell.powered) poweredCount++;
-      }
+  let built = false;
+  function build(){
+    if(built) return; built = true;
+    generate(); render();
+    [mapA, mapB].forEach((panel, side) => {
+      panel.addEventListener('click', (e) => onTap(e, panel, side === 0 ? 'a' : 'b'));
+      panel.addEventListener('touchstart', (e) => onTap(e.touches[0], panel, side === 0 ? 'a' : 'b'), { passive: true });
     });
-
-    const voltage = Math.round((poweredCount / 16) * 100);
-    voltEl.textContent = `${voltage}%`;
-
-    const endCell = grid[15];
-    const endEff = rotateMask(endCell.baseMask, endCell.rot);
-    if(endCell.powered && (endEff & 2)){
-      winCircuit();
-    } else {
-      endTerm.classList.remove('active');
-      statEl.textContent = 'OFFLINE';
-      statEl.className = 'status-locked';
-    }
+    startTimer();
   }
-
-  function winCircuit(){
+  function onTap(e, panel, side){
     if(done) return;
-    done = true;
-    clearInterval(timerId);
-    endTerm.classList.add('active');
-    statEl.textContent = 'ONLINE';
-    statEl.className = 'status-unlocked';
-    voltEl.textContent = '100%';
-    hintEl.classList.add('reveal-answer');
-    hintEl.textContent = '✦ CURRENT FLOWING — REACTOR FULLY ENERGIZED ✦';
-    music.gameTone(523, 0.4);
-    setTimeout(() => music.gameTone(659, 0.4), 160);
-    setTimeout(() => music.gameTone(784, 0.8), 320);
-    setTimeout(() => completeTrial(1), 1100);
-  }
-
-  function autoSolveAndFinish(){
-    done = true;
-    clearInterval(timerId);
-    screenFlash();
-    grid.forEach(cell => {
-      cell.rot = 0;
-      if(cell.element){
-        cell.element.style.transform = `rotate(0deg)`;
+    const rect = panel.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    for(const [id, d] of Object.entries(diffMap)){
+      if(found.has(id)) continue;
+      const target = d[side];
+      if(d.kind === 'missA' && side === 'a') continue;
+      if(d.kind === 'missB' && side === 'b') continue;
+      const dx = x - target.x, dy = y - target.y;
+      if(Math.sqrt(dx * dx + dy * dy) <= HIT_RADIUS){
+        found.add(id);
+        placeMark(mapA, d.a.x, d.a.y, 'green');
+        placeMark(mapB, d.b.x, d.b.y, 'green');
+        foundEl.textContent = found.size;
+        if(found.size >= NUM_DIFFS) win();
+        return;
       }
-    });
-    updatePowerFlow();
-    hintEl.classList.add('reveal-answer');
-    hintEl.textContent = "Time's up. Ancient circuit stabilizes automatically.";
-    setTimeout(() => completeTrial(1), 2600);
+    }
+    placeMark(panel, x, y, 'red', true);
   }
-
+  function placeMark(panel, x, y, color, transient, late){
+    const m = document.createElement('div');
+    m.className = color === 'green' ? 'map-marker' + (late ? ' late' : '') : 'map-miss';
+    m.style.left = x + '%'; m.style.top = y + '%';
+    panel.appendChild(m);
+    if(transient) setTimeout(() => m.remove(), 500);
+  }
   function startTimer(){
-    clearInterval(timerId);
+    if(timerId) return;
     timerId = setInterval(() => {
       timeLeft--;
       const m = String(Math.floor(timeLeft / 60)).padStart(2, '0');
       const s = String(timeLeft % 60).padStart(2, '0');
       timerEl.textContent = `${m}:${s}`;
       if(timeLeft <= 10) timerEl.classList.add('low');
-      if(timeLeft <= 0){
-        clearInterval(timerId);
-        autoSolveAndFinish();
-      }
+      if(timeLeft <= 0){ clearInterval(timerId); revealAllAndFinish(); }
     }, 1000);
   }
-
-  initCircuitTrial = function(){
-    clearInterval(timerId);
-    timerId = null;
-    timeLeft = TIME_LIMIT;
-    done = false;
-
-    gridEl.innerHTML = '';
-    timerEl.textContent = '01:00';
-    timerEl.classList.remove('low');
-    hintEl.classList.remove('reveal-answer');
-    hintEl.textContent = 'Tap conduit tiles to rotate them. Connect the glowing line to Core Ω.';
-    statEl.textContent = 'OFFLINE';
-    statEl.className = 'status-locked';
-    voltEl.textContent = '0%';
-    endTerm.classList.remove('active');
-
-    grid = generateSolvableMaze();
-
-    grid.forEach(cell => {
-      const tileEl = document.createElement('div');
-      tileEl.className = 'circuit-tile';
-      tileEl.innerHTML = createTileSvg(cell.baseMask);
-      tileEl.style.transform = `rotate(${cell.rot * 90}deg)`;
-      cell.element = tileEl;
-
-      tileEl.addEventListener('click', () => {
-        if(done) return;
-        cell.rot = (cell.rot + 1) % 4;
-        tileEl.style.transform = `rotate(${cell.rot * 90}deg)`;
-        music.mechanicalClick();
-        updatePowerFlow();
-      });
-
-      gridEl.appendChild(tileEl);
+  function win(){
+    done = true; clearInterval(timerId);
+    hintEl.textContent = "The maps align…";
+    setTimeout(() => completeTrial(1), 800);
+  }
+  function revealAllAndFinish(){
+    done = true; screenFlash();
+    let missed = 0;
+    Object.entries(diffMap).forEach(([id, d]) => {
+      if(!found.has(id)){
+        missed++;
+        placeMark(mapA, d.a.x, d.a.y, 'green', false, true);
+        placeMark(mapB, d.b.x, d.b.y, 'green', false, true);
+      }
     });
-
-    updatePowerFlow();
-    startTimer();
-  };
+    hintEl.classList.add('reveal-answer');
+    hintEl.textContent = `Time's up.  ${missed} shift${missed === 1 ? '' : 's'} unseen — now marked in amber.`;
+    setTimeout(() => completeTrial(1), 3200);
+  }
+  const obs = new MutationObserver(() => {
+    if(document.getElementById('s-map').classList.contains('on')) build();
+  });
+  obs.observe(document.getElementById('s-map'), { attributes: true, attributeFilter: ['class'] });
 })();
 
 
 /* ================================================================
-   11) TRIAL 3 — SIGILS  (Memory Rune Pairs)
+   11) TRIAL 3 — SIGILS  (random pool, reveals on timeout)
    ================================================================ */
-let initSigilsTrial = null;
-(function sigilsModule(){
+(function sigils(){
   const POOL = ['☾','✦','☠','⚔','⚗','⌛','☥','☯','⚚','✵','⚝','☬','♆','⚕','ᛗ','ᚦ'];
   const TIME_LIMIT = 60;
   const grid = document.getElementById('memoGrid');
   const matchEl = document.getElementById('matches');
   const moveEl = document.getElementById('moves');
   const hintEl = document.getElementById('sigilHint');
-  let flipped = [], matches = 0, moves = 0, lock = false, done = false;
-  let timerId = null;
+  let flipped = [], matches = 0, moves = 0, lock = false, built = false;
+  let timerId = null, done = false;
 
   function shuffle(a){
     for(let i = a.length - 1; i > 0; i--){
@@ -1340,11 +978,23 @@ let initSigilsTrial = null;
     }
     return a;
   }
-
+  function build(){
+    if(built) return; built = true;
+    const symbols = shuffle([...POOL]).slice(0, 6);
+    const deck = shuffle([...symbols, ...symbols]);
+    grid.innerHTML = '';
+    deck.forEach(sym => {
+      const card = document.createElement('div');
+      card.className = 'card'; card.dataset.sym = sym;
+      card.innerHTML = `<div class="card-inner"><div class="card-face card-back">✦</div><div class="card-face card-front">${sym}</div></div>`;
+      card.addEventListener('click', () => flip(card));
+      grid.appendChild(card);
+    });
+    timerId = setTimeout(loseWithReveal, TIME_LIMIT * 1000);
+  }
   function flip(card){
     if(lock || done) return;
     if(card.classList.contains('flipped') || card.classList.contains('matched')) return;
-    music.mechanicalClick();
     card.classList.add('flipped');
     flipped.push(card);
     if(flipped.length === 2){
@@ -1354,26 +1004,21 @@ let initSigilsTrial = null;
         setTimeout(() => {
           a.classList.add('matched'); b.classList.add('matched');
           flipped = []; matches++; matchEl.textContent = matches;
-          music.gameTone(659, 0.2);
           if(matches === 6){
             done = true; clearTimeout(timerId);
-            hintEl.textContent = "✦ ALL SIGILS MATCHED — THE HUNT AWAKENS ✦";
-            music.gameTone(523, 0.4);
-            setTimeout(() => music.gameTone(784, 0.6), 200);
-            setTimeout(() => completeTrial(2), 850);
+            hintEl.textContent = "The sigils align…";
+            setTimeout(() => completeTrial(2), 800);
           }
-        }, 250);
+        }, 300);
       } else {
         lock = true;
-        music.errorTone();
         setTimeout(() => {
           a.classList.remove('flipped'); b.classList.remove('flipped');
           flipped = []; lock = false;
-        }, 750);
+        }, 800);
       }
     }
   }
-
   function loseWithReveal(){
     if(done) return;
     done = true; screenFlash();
@@ -1381,250 +1026,154 @@ let initSigilsTrial = null;
       if(!c.classList.contains('matched')) c.classList.add('flipped', 'revealed');
     });
     hintEl.classList.add('reveal-answer');
-    hintEl.textContent = "Time's up. All sigils now revealed.";
-    setTimeout(() => completeTrial(2), 2800);
+    hintEl.textContent = "Time's up.  All sigils now revealed.";
+    setTimeout(() => completeTrial(2), 3200);
   }
-
-  initSigilsTrial = function(){
-    clearTimeout(timerId);
-    flipped = [];
-    matches = 0;
-    moves = 0;
-    lock = false;
-    done = false;
-
-    matchEl.textContent = '0';
-    moveEl.textContent = '0';
-    hintEl.classList.remove('reveal-answer');
-    hintEl.textContent = 'Tap two sigils to reveal them.';
-
-    const symbols = shuffle([...POOL]).slice(0, 6);
-    const deck = shuffle([...symbols, ...symbols]);
-    grid.innerHTML = '';
-
-    deck.forEach(sym => {
-      const card = document.createElement('div');
-      card.className = 'card';
-      card.dataset.sym = sym;
-      card.innerHTML = `<div class="card-inner"><div class="card-face card-back">✦</div><div class="card-face card-front">${sym}</div></div>`;
-      card.addEventListener('click', () => flip(card));
-      grid.appendChild(card);
-    });
-
-    timerId = setTimeout(loseWithReveal, TIME_LIMIT * 1000);
-  };
+  const obs = new MutationObserver(() => {
+    if(document.getElementById('s-sigils').classList.contains('on')) build();
+  });
+  obs.observe(document.getElementById('s-sigils'), { attributes: true, attributeFilter: ['class'] });
 })();
 
 
 /* ================================================================
-   12) TRIAL 4 — THE CELESTIAL ASTROLABE (Concentric Alignment Rings)
+   12) TRIAL 4 — THE ORACLE  (Simon-Says with mystic runes & tones)
    ================================================================ */
-let initAstrolabeTrial = null;
-(function astrolabeModule(){
-  const GLYPHS = ['☾', '✦', '☠', '⚔', '☥', '☬', '⚕', 'ᛗ'];
+(function oracle(){
   const TIME_LIMIT = 60;
+  const NOTES = [523.25, 659.25, 783.99, 987.77]; // C5, E5, G5, B5 (Cmaj7 chord)
+  const SEQ_LENS = [3, 4, 5];  // Round 1: 3, Round 2: 4, Round 3: 5
 
-  const stage = document.getElementById('s-astrolabe');
-  const timerEl = document.getElementById('astrolabeTimer');
-  const hintEl = document.getElementById('astrolabeHint');
-  const alignedEl = document.getElementById('astrolabeAligned');
-  const statEl = document.getElementById('astrolabeStatus');
-  const beamEl = document.getElementById('astrolabeBeam');
+  const stage    = document.getElementById('s-oracle');
+  const grid     = document.getElementById('oracleGrid');
+  const roundEl  = document.getElementById('oracleRound');
+  const timerEl  = document.getElementById('oracleTimer');
+  const stateEl  = document.getElementById('oracleState');
+  const hintEl   = document.getElementById('oracleHint');
+  const startBtn = document.getElementById('oracleStart');
+  const tiles    = () => grid.querySelectorAll('.oracle-tile');
 
-  const tGlyphOuter = document.getElementById('tGlyphOuter');
-  const tGlyphMid = document.getElementById('tGlyphMid');
-  const tGlyphInner = document.getElementById('tGlyphInner');
+  let round = 0, sequence = [], userIdx = 0, accepting = false;
+  let done = false, timeLeft = TIME_LIMIT, timerId = null, built = false;
 
-  const tStatOuter = document.getElementById('tStatOuter');
-  const tStatMid = document.getElementById('tStatMid');
-  const tStatInner = document.getElementById('tStatInner');
+  function lightTile(idx, duration=400){
+    const tile = tiles()[idx];
+    if(!tile) return;
+    tile.classList.add('active');
+    music.gameTone(NOTES[idx], 0.4, 0.4);
+    setTimeout(() => tile.classList.remove('active'), duration);
+  }
 
-  const slotOuter = document.getElementById('targetOuter');
-  const slotMid = document.getElementById('targetMid');
-  const slotInner = document.getElementById('targetInner');
-
-  const ringOuterEl = document.getElementById('ringOuter');
-  const ringMidEl = document.getElementById('ringMid');
-  const ringInnerEl = document.getElementById('ringInner');
-
-  const btnOuter = document.getElementById('btnRotateOuter');
-  const btnMid = document.getElementById('btnRotateMid');
-  const btnInner = document.getElementById('btnRotateInner');
-
-  let angles = { outer: 0, mid: 0, inner: 0 };
-  let targets = { outer: '', mid: '', inner: '' };
-  let timerId = null, timeLeft = TIME_LIMIT, done = false;
-  let wired = false;
-
-  function populateRing(ringEl, radius){
-    ringEl.innerHTML = '';
-    GLYPHS.forEach((g, i) => {
-      const node = document.createElement('div');
-      node.className = 'astro-node';
-      const deg = i * 45 - 90;
-      const rad = deg * Math.PI / 180;
-      const x = radius + Math.cos(rad) * radius - 16;
-      const y = radius + Math.sin(rad) * radius - 16;
-      node.style.left = `${x}px`;
-      node.style.top = `${y}px`;
-      node.textContent = g;
-      ringEl.appendChild(node);
+  function playSequence(){
+    accepting = false;
+    stateEl.textContent = '✦ WATCH THE ORACLE ✦';
+    stateEl.className = 'oracle-state watch';
+    sequence.forEach((idx, i) => {
+      setTimeout(() => {
+        lightTile(idx, 450);
+        if(i === sequence.length - 1){
+          setTimeout(() => {
+            accepting = true;
+            userIdx = 0;
+            stateEl.textContent = '➤ NOW REPEAT IT';
+            stateEl.className = 'oracle-state repeat';
+          }, 600);
+        }
+      }, 600 + i * 700);
     });
   }
 
-  function getTopGlyph(ringAngle){
-    const step = ((-ringAngle % 360) + 360) % 360 / 45;
-    const idx = Math.round(step) % 8;
-    return GLYPHS[idx];
+  function newRound(){
+    userIdx = 0;
+    sequence = [];
+    const len = SEQ_LENS[round];
+    for(let i = 0; i < len; i++) sequence.push(Math.floor(Math.random() * 4));
+    roundEl.textContent = round + 1;
+    setTimeout(playSequence, 600);
   }
 
-  function checkAlignment(){
-    const topOuter = getTopGlyph(angles.outer);
-    const topMid = getTopGlyph(angles.mid);
-    const topInner = getTopGlyph(angles.inner);
-
-    const mOuter = topOuter === targets.outer;
-    const mMid = topMid === targets.mid;
-    const mInner = topInner === targets.inner;
-
-    slotOuter.classList.toggle('aligned', mOuter);
-    tStatOuter.textContent = mOuter ? 'ALIGNED' : 'WAITING';
-
-    slotMid.classList.toggle('aligned', mMid);
-    tStatMid.textContent = mMid ? 'ALIGNED' : 'WAITING';
-
-    slotInner.classList.toggle('aligned', mInner);
-    tStatInner.textContent = mInner ? 'ALIGNED' : 'WAITING';
-
-    let count = 0;
-    if(mOuter) count++;
-    if(mMid) count++;
-    if(mInner) count++;
-
-    alignedEl.textContent = count;
-
-    if(count === 3){
-      winAstrolabe();
+  function onTileTap(idx){
+    if(!accepting || done) return;
+    lightTile(idx, 300);
+    if(idx === sequence[userIdx]){
+      userIdx++;
+      if(userIdx >= sequence.length){
+        accepting = false;
+        round++;
+        if(round >= SEQ_LENS.length){
+          win();
+        } else {
+          stateEl.textContent = `✓ ROUND ${round} — NEXT UP…`;
+          stateEl.className = 'oracle-state repeat';
+          setTimeout(newRound, 1200);
+        }
+      }
     } else {
-      beamEl.classList.remove('aligned-beam');
-      statEl.textContent = 'LOCKED';
-      statEl.className = 'status-locked';
+      // Wrong tile
+      accepting = false;
+      const tile = tiles()[idx];
+      tile.classList.add('wrong');
+      music.errorTone();
+      setTimeout(() => tile.classList.remove('wrong'), 500);
+      loseWithReveal();
     }
   }
 
-  function rotateRing(ringName){
-    if(done) return;
-    angles[ringName] = (angles[ringName] + 45) % 360;
-    const el = ringName === 'outer' ? ringOuterEl : (ringName === 'mid' ? ringMidEl : ringInnerEl);
-    el.style.transform = `rotate(${angles[ringName]}deg)`;
-    music.mechanicalClick();
-    checkAlignment();
-  }
-
-  function winAstrolabe(){
-    if(done) return;
-    done = true;
-    clearInterval(timerId);
-    beamEl.classList.add('aligned-beam');
-    statEl.textContent = 'UNSEALED';
-    statEl.className = 'status-unlocked';
-    hintEl.classList.add('reveal-answer');
-    hintEl.textContent = '✦ THE CELESTIAL RINGS ALIGN — THE SEAL IS BROKEN ✦';
-    music.gameTone(523, 0.5);
-    setTimeout(() => music.gameTone(659, 0.5), 180);
-    setTimeout(() => music.gameTone(784, 0.6), 360);
-    setTimeout(() => music.gameTone(1046.5, 0.9), 540);
-    setTimeout(() => completeTrial(3), 1300);
-  }
-
-  function autoSolveAndFinish(){
-    done = true;
-    clearInterval(timerId);
-    screenFlash();
-
-    ['outer', 'mid', 'inner'].forEach(ringName => {
-      const targetG = targets[ringName];
-      const targetIdx = GLYPHS.indexOf(targetG);
-      const winAngle = ((-targetIdx * 45) % 360 + 360) % 360;
-      angles[ringName] = winAngle;
-      const el = ringName === 'outer' ? ringOuterEl : (ringName === 'mid' ? ringMidEl : ringInnerEl);
-      el.style.transform = `rotate(${winAngle}deg)`;
-    });
-
-    checkAlignment();
-    hintEl.classList.add('reveal-answer');
-    hintEl.textContent = "Time's up. The ancient astrolabe locks automatically.";
-    setTimeout(() => completeTrial(3), 2600);
-  }
-
   function startTimer(){
-    clearInterval(timerId);
+    if(timerId) return;
     timerId = setInterval(() => {
       timeLeft--;
       const m = String(Math.floor(timeLeft / 60)).padStart(2, '0');
       const s = String(timeLeft % 60).padStart(2, '0');
       timerEl.textContent = `${m}:${s}`;
       if(timeLeft <= 10) timerEl.classList.add('low');
-      if(timeLeft <= 0){
-        clearInterval(timerId);
-        autoSolveAndFinish();
-      }
+      if(timeLeft <= 0){ clearInterval(timerId); loseWithReveal("Time's up."); }
     }, 1000);
   }
 
-  initAstrolabeTrial = function(){
-    clearInterval(timerId);
-    timerId = null;
-    timeLeft = TIME_LIMIT;
-    done = false;
+  function win(){
+    done = true; clearInterval(timerId);
+    stateEl.textContent = '✦ THE ORACLE APPROVES ✦';
+    stateEl.className = 'oracle-state repeat';
+    hintEl.classList.add('reveal-answer');
+    hintEl.textContent = 'All three rounds echoed back. The hunt awaits.';
+    // Victory chord
+    music.gameTone(523, 1.0);
+    music.gameTone(659, 1.0);
+    music.gameTone(784, 1.2);
+    setTimeout(() => completeTrial(3), 1400);
+  }
 
-    timerEl.textContent = '01:00';
-    timerEl.classList.remove('low');
-    hintEl.classList.remove('reveal-answer');
-    hintEl.textContent = 'Rotate each ring until target glyphs cross the vertical beam.';
-    statEl.textContent = 'LOCKED';
-    statEl.className = 'status-locked';
-    beamEl.classList.remove('aligned-beam');
-
-    populateRing(ringOuterEl, 145);
-    populateRing(ringMidEl, 102.5);
-    populateRing(ringInnerEl, 62.5);
-
-    const pool = [...GLYPHS];
-    targets.outer = pool[Math.floor(Math.random() * pool.length)];
-    targets.mid = pool[Math.floor(Math.random() * pool.length)];
-    targets.inner = pool[Math.floor(Math.random() * pool.length)];
-
-    tGlyphOuter.textContent = targets.outer;
-    tGlyphMid.textContent = targets.mid;
-    tGlyphInner.textContent = targets.inner;
-
-    ['outer', 'mid', 'inner'].forEach(ringName => {
-      const targetIdx = GLYPHS.indexOf(targets[ringName]);
-      const solvedAngle = ((-targetIdx * 45) % 360 + 360) % 360;
-      let scramble = solvedAngle;
-      while(scramble === solvedAngle){
-        scramble = Math.floor(Math.random() * 8) * 45;
-      }
-      angles[ringName] = scramble;
-      const el = ringName === 'outer' ? ringOuterEl : (ringName === 'mid' ? ringMidEl : ringInnerEl);
-      el.style.transform = `rotate(${scramble}deg)`;
+  function loseWithReveal(prefix){
+    done = true; clearInterval(timerId); screenFlash();
+    stateEl.textContent = prefix ? '✕  ' + prefix + '  ✕' : '✕ WRONG RUNE ✕';
+    stateEl.className = 'oracle-state wrong';
+    hintEl.classList.add('reveal-answer');
+    hintEl.textContent = 'The sequence was: ' + sequence.map(i => tiles()[i].textContent).join(' ');
+    // Replay the correct sequence slowly so user sees the answer
+    sequence.forEach((idx, i) => {
+      setTimeout(() => lightTile(idx, 500), 1200 + i * 700);
     });
+    const revealTime = 1200 + sequence.length * 700 + 800;
+    setTimeout(() => completeTrial(3), revealTime);
+  }
 
-    checkAlignment();
-    startTimer();
+  function build(){
+    if(built) return; built = true;
+    // Wire tile clicks
+    tiles().forEach((tile, i) => {
+      tile.addEventListener('click', () => onTileTap(i));
+    });
+    startBtn.addEventListener('click', () => {
+      if(round > 0 || done) return;
+      startBtn.disabled = true;
+      startTimer();
+      newRound();
+    });
+  }
 
-    if(!wired){
-      wired = true;
-      btnOuter.addEventListener('click', () => rotateRing('outer'));
-      btnMid.addEventListener('click', () => rotateRing('mid'));
-      btnInner.addEventListener('click', () => rotateRing('inner'));
-
-      ringOuterEl.addEventListener('click', () => rotateRing('outer'));
-      ringMidEl.addEventListener('click', () => rotateRing('mid'));
-      ringInnerEl.addEventListener('click', () => rotateRing('inner'));
-    }
-  };
+  const obs = new MutationObserver(() => { if(stage.classList.contains('on')) build(); });
+  obs.observe(stage, { attributes: true, attributeFilter: ['class'] });
 })();
 
 
