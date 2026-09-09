@@ -143,8 +143,10 @@ document.querySelectorAll('[data-back]').forEach(b => {
 function completeTrial(idx){
   const trials = document.querySelectorAll('.trial');
   if(trials[idx]) trials[idx].classList.add('done');
-  goldBurst(); // crazy add
-  setTimeout(() => show('reveal'), 1100);
+  goldBurst();
+  // Oracle (trial IV) has its own cipher reveal — everything else uses the main reveal
+  const target = (idx === 3) ? 'cipher-reveal' : 'reveal';
+  setTimeout(() => show(target), 1100);
 }
 
 
@@ -1037,86 +1039,137 @@ async function runTypewriter(){
 
 
 /* ================================================================
-   12) TRIAL 4 — THE ORACLE  (Simon-Says with mystic runes & tones)
+   12) TRIAL 4 — THE ASTROLABE  (3 spinning rune-rings, align to target)
    ================================================================ */
-(function oracle(){
-  const TIME_LIMIT = 60;
-  const NOTES = [523.25, 659.25, 783.99, 987.77]; // C5, E5, G5, B5 (Cmaj7 chord)
-  const SEQ_LENS = [3, 4, 5];  // Round 1: 3, Round 2: 4, Round 3: 5
+(function astrolabe(){
+  const POOL = ['☾','✦','☠','⚔','⚗','⌛','☥','☯','⚚','⚝','☬','♆','⚕','ᛗ','ᚦ','ᚨ'];
+  const TIME_LIMIT = 90;
+  // Rune-circle radii per ring (matches CSS ring::before sizes)
+  const RADII = { outer: 140, middle: 104, inner: 70 };
+  const RADII_SM = { outer: 122, middle: 90, inner: 60 };   // for < 380px viewport
 
-  const stage    = document.getElementById('s-oracle');
-  const grid     = document.getElementById('oracleGrid');
-  const roundEl  = document.getElementById('oracleRound');
-  const timerEl  = document.getElementById('oracleTimer');
-  const stateEl  = document.getElementById('oracleState');
-  const hintEl   = document.getElementById('oracleHint');
-  const startBtn = document.getElementById('oracleStart');
-  const tiles    = () => grid.querySelectorAll('.oracle-tile');
+  const stage = document.getElementById('s-astro');
+  const targetRow = document.getElementById('astroTargets');
+  const alignedEl = document.getElementById('astroAligned');
+  const timerEl = document.getElementById('astroTimer');
+  const hintEl  = document.getElementById('astroHint');
+  const ctrls   = document.getElementById('astroControls');
 
-  let round = 0, sequence = [], userIdx = 0, accepting = false;
-  let done = false, timeLeft = TIME_LIMIT, timerId = null, built = false;
+  const ringDefs = [
+    { key: 'outer',  el: document.getElementById('ringOuter')  },
+    { key: 'middle', el: document.getElementById('ringMiddle') },
+    { key: 'inner',  el: document.getElementById('ringInner')  },
+  ];
+  let state = null, done = false, timeLeft = TIME_LIMIT, timerId = null, built = false;
 
-  function lightTile(idx, duration=400){
-    const tile = tiles()[idx];
-    if(!tile) return;
-    tile.classList.add('active');
-    music.gameTone(NOTES[idx], 0.4, 0.4);
-    setTimeout(() => tile.classList.remove('active'), duration);
+  function shuffle(a){
+    for(let i = a.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
   }
 
-  function playSequence(){
-    accepting = false;
-    stateEl.textContent = '✦ WATCH THE ORACLE ✦';
-    stateEl.className = 'oracle-state watch';
-    sequence.forEach((idx, i) => {
-      setTimeout(() => {
-        lightTile(idx, 450);
-        if(i === sequence.length - 1){
-          setTimeout(() => {
-            accepting = true;
-            userIdx = 0;
-            stateEl.textContent = '➤ NOW REPEAT IT';
-            stateEl.className = 'oracle-state repeat';
-          }, 600);
-        }
-      }, 600 + i * 700);
+  function currentRadius(key){
+    const isSmall = window.innerWidth < 380;
+    return (isSmall ? RADII_SM : RADII)[key];
+  }
+
+  function generate(){
+    state = ringDefs.map(rd => {
+      const symbols = shuffle([...POOL]).slice(0, 6);
+      const targetIdx = Math.floor(Math.random() * 6);
+      // Initial offset — not on target, 2-5 steps off
+      const offset = (targetIdx + 2 + Math.floor(Math.random() * 4)) % 6;
+      // rotAccum: rotation (deg) that puts rune[offset] at the top.
+      // Rune i is at base angle (i * 60) from top CW; visible pos = i*60 + rotAccum (mod 360)
+      // For rune[offset] to have visible pos 0: rotAccum = -offset*60
+      const rotAccum = -offset * 60;
+      return { ...rd, symbols, targetIdx, offset, rotAccum, runes: [] };
     });
   }
 
-  function newRound(){
-    userIdx = 0;
-    sequence = [];
-    const len = SEQ_LENS[round];
-    for(let i = 0; i < len; i++) sequence.push(Math.floor(Math.random() * 4));
-    roundEl.textContent = round + 1;
-    setTimeout(playSequence, 600);
+  function renderTargets(){
+    targetRow.innerHTML = state.map((s, i) => {
+      const sep = i < state.length - 1 ? '<span class="tgt-sep">·</span>' : '';
+      return `<span class="tgt" data-i="${i}">${s.symbols[s.targetIdx]}</span>${sep}`;
+    }).join('');
   }
 
-  function onTileTap(idx){
-    if(!accepting || done) return;
-    lightTile(idx, 300);
-    if(idx === sequence[userIdx]){
-      userIdx++;
-      if(userIdx >= sequence.length){
-        accepting = false;
-        round++;
-        if(round >= SEQ_LENS.length){
-          win();
+  function renderRing(ring){
+    ring.el.innerHTML = '';
+    ring.runes = ring.symbols.map((sym, i) => {
+      const div = document.createElement('div');
+      div.className = 'rune';
+      div.textContent = sym;
+      div.dataset.i = i;
+      ring.el.appendChild(div);
+      return div;
+    });
+    // Disable transitions for initial placement, then re-enable next frame
+    ring.el.style.transition = 'none';
+    ring.runes.forEach(r => r.style.transition = 'none');
+    applyRotation(ring);
+    // Force reflow
+    // eslint-disable-next-line no-unused-expressions
+    ring.el.offsetHeight;
+    requestAnimationFrame(() => {
+      ring.el.style.transition = '';
+      ring.runes.forEach(r => r.style.transition = '');
+    });
+  }
+
+  // Apply the current rotation to ring and re-orient each rune to stay upright
+  function applyRotation(ring){
+    const r = currentRadius(ring.key);
+    ring.el.style.transform = `rotate(${ring.rotAccum}deg)`;
+    ring.runes.forEach((el, i) => {
+      const angle = i * 60;
+      // Position at angle, then counter-rotate so text stays upright
+      el.style.transform =
+        `rotate(${angle}deg) translateY(-${r}px) rotate(${-angle - ring.rotAccum}deg)`;
+    });
+  }
+
+  function markTop(){
+    if(!state) return;
+    let alignedCount = 0;
+    state.forEach((ring, ri) => {
+      ring.runes.forEach(r => r.classList.remove('at-top', 'correct'));
+      const topRune = ring.runes[ring.offset];
+      if(topRune){
+        topRune.classList.add('at-top');
+        const tgtSpan = targetRow.querySelector(`.tgt[data-i="${ri}"]`);
+        if(ring.offset === ring.targetIdx){
+          topRune.classList.add('correct');
+          alignedCount++;
+          if(tgtSpan) tgtSpan.classList.add('aligned');
         } else {
-          stateEl.textContent = `✓ ROUND ${round} — NEXT UP…`;
-          stateEl.className = 'oracle-state repeat';
-          setTimeout(newRound, 1200);
+          if(tgtSpan) tgtSpan.classList.remove('aligned');
         }
       }
+    });
+    alignedEl.textContent = alignedCount;
+    if(alignedCount === 3 && !done) win();
+  }
+
+  function rotate(ringIdx, dir){
+    if(done) return;
+    const ring = state[ringIdx];
+    if(dir === 1){
+      // Clockwise (visually): rotAccum += 60. New top rune = offset - 1 (mod 6).
+      ring.rotAccum += 60;
+      ring.offset = (ring.offset + 5) % 6;
     } else {
-      // Wrong tile
-      accepting = false;
-      const tile = tiles()[idx];
-      tile.classList.add('wrong');
-      music.errorTone();
-      setTimeout(() => tile.classList.remove('wrong'), 500);
-      loseWithReveal();
+      // Counter-clockwise: rotAccum -= 60. New top rune = offset + 1 (mod 6).
+      ring.rotAccum -= 60;
+      ring.offset = (ring.offset + 1) % 6;
     }
+    applyRotation(ring);
+    // Give the transition time to visibly land before marking
+    setTimeout(markTop, 60);
+    // Play a subtle tick sound
+    if(music.isPlaying()) music.gameTone(440 + ringIdx * 80, 0.12, 0.2);
   }
 
   function startTimer(){
@@ -1126,50 +1179,53 @@ async function runTypewriter(){
       const m = String(Math.floor(timeLeft / 60)).padStart(2, '0');
       const s = String(timeLeft % 60).padStart(2, '0');
       timerEl.textContent = `${m}:${s}`;
-      if(timeLeft <= 10) timerEl.classList.add('low');
-      if(timeLeft <= 0){ clearInterval(timerId); loseWithReveal("Time's up."); }
+      if(timeLeft <= 15) timerEl.classList.add('low');
+      if(timeLeft <= 0){ clearInterval(timerId); loseWithReveal(); }
     }, 1000);
-  }
-
-  function win(){
-    done = true; clearInterval(timerId);
-    stateEl.textContent = '✦ THE ORACLE APPROVES ✦';
-    stateEl.className = 'oracle-state repeat';
-    hintEl.classList.add('reveal-answer');
-    hintEl.textContent = 'All three rounds echoed back. The hunt awaits.';
-    // Victory chord
-    music.gameTone(523, 1.0);
-    music.gameTone(659, 1.0);
-    music.gameTone(784, 1.2);
-    setTimeout(() => completeTrial(3), 1400);
-  }
-
-  function loseWithReveal(prefix){
-    done = true; clearInterval(timerId); screenFlash();
-    stateEl.textContent = prefix ? '✕  ' + prefix + '  ✕' : '✕ WRONG RUNE ✕';
-    stateEl.className = 'oracle-state wrong';
-    hintEl.classList.add('reveal-answer');
-    hintEl.textContent = 'The sequence was: ' + sequence.map(i => tiles()[i].textContent).join(' ');
-    // Replay the correct sequence slowly so user sees the answer
-    sequence.forEach((idx, i) => {
-      setTimeout(() => lightTile(idx, 500), 1200 + i * 700);
-    });
-    const revealTime = 1200 + sequence.length * 700 + 800;
-    setTimeout(() => completeTrial(3), revealTime);
   }
 
   function build(){
     if(built) return; built = true;
-    // Wire tile clicks
-    tiles().forEach((tile, i) => {
-      tile.addEventListener('click', () => onTileTap(i));
+    timerEl.textContent = '01:30';
+    generate();
+    renderTargets();
+    state.forEach(renderRing);
+    markTop();
+    ctrls.addEventListener('click', (e) => {
+      const b = e.target.closest('.ctrl-btn'); if(!b) return;
+      rotate(Number(b.dataset.r), Number(b.dataset.d));
     });
-    startBtn.addEventListener('click', () => {
-      if(round > 0 || done) return;
-      startBtn.disabled = true;
-      startTimer();
-      newRound();
+    startTimer();
+    // Re-position runes if the viewport crosses the small-screen breakpoint
+    window.addEventListener('resize', () => state.forEach(applyRotation));
+  }
+
+  function win(){
+    done = true; clearInterval(timerId);
+    hintEl.classList.add('reveal-answer');
+    hintEl.textContent = 'All rings aligned. The cipher speaks…';
+    setTimeout(() => completeTrial(3), 900);
+  }
+
+  function loseWithReveal(){
+    done = true; screenFlash();
+    // Auto-rotate rings to the correct alignment so player sees the answer
+    state.forEach(ring => {
+      // Compute rotAccum that brings targetIdx to top: rotAccum = -targetIdx*60
+      // Choose value nearest to current rotAccum so the sweep animates the SHORT way.
+      const desiredMod = ((-ring.targetIdx * 60) % 360 + 360) % 360;
+      const currentMod = ((ring.rotAccum) % 360 + 360) % 360;
+      let delta = desiredMod - currentMod;
+      if(delta > 180)  delta -= 360;
+      if(delta < -180) delta += 360;
+      ring.rotAccum += delta;
+      ring.offset = ring.targetIdx;
+      applyRotation(ring);
     });
+    setTimeout(markTop, 600);
+    hintEl.classList.add('reveal-answer');
+    hintEl.textContent = "Time's up.  Correct alignment revealed above.";
+    setTimeout(() => completeTrial(3), 3400);
   }
 
   const obs = new MutationObserver(() => { if(stage.classList.contains('on')) build(); });
@@ -1181,5 +1237,72 @@ async function runTypewriter(){
    13) REVEAL — replay
    ================================================================ */
 document.getElementById('replay').addEventListener('click', () => show('s-intro'));
+
+
+/* ================================================================
+   14) CIPHER REVEAL (Oracle trial only) — matrix bg, copy, replay
+   ================================================================ */
+(function cipherReveal(){
+  const stage = document.getElementById('cipher-reveal');
+  const matrix = document.getElementById('cfMatrix');
+  const copyBtn = document.getElementById('cfCopy');
+  const replayBtn = document.getElementById('cfReplay');
+  const FLAG = 'MYSTIC{GAME_WAS_FUN}';
+  let matrixBuilt = false;
+
+  function buildMatrix(){
+    if(matrixBuilt) return; matrixBuilt = true;
+    const CHARS = '01アイウエオカキクケコサシスセソタチツテト0123456789ABCDEF@#$%*&<>';
+    const w = window.innerWidth;
+    const colWidth = 20;
+    const cols = Math.floor(w / colWidth);
+    matrix.innerHTML = '';
+    for(let i = 0; i < cols; i++){
+      const col = document.createElement('div');
+      col.className = 'col';
+      col.style.left = (i * colWidth) + 'px';
+      col.style.animationDuration = (6 + Math.random() * 10) + 's';
+      col.style.animationDelay = (Math.random() * 8) + 's';
+      let text = '';
+      const rows = 20 + Math.floor(Math.random() * 15);
+      for(let j = 0; j < rows; j++){
+        text += CHARS[Math.floor(Math.random() * CHARS.length)] + '\n';
+      }
+      col.textContent = text;
+      matrix.appendChild(col);
+    }
+  }
+
+  copyBtn.addEventListener('click', () => {
+    if(!navigator.clipboard) return;
+    navigator.clipboard.writeText(FLAG).then(() => {
+      copyBtn.classList.add('copied');
+      copyBtn.textContent = '✓ COPIED';
+      setTimeout(() => {
+        copyBtn.classList.remove('copied');
+        copyBtn.textContent = '⧉ COPY';
+      }, 1800);
+    });
+  });
+
+  replayBtn.addEventListener('click', () => show('s-intro'));
+
+  // Play a cipher-unlock sequence of tones on reveal (each time it opens)
+  function playUnlockSequence(){
+    if(!music.isPlaying()) return;
+    music.gameTone(392, 0.25, 0.35); // G
+    setTimeout(() => music.gameTone(523, 0.25, 0.35), 220); // C
+    setTimeout(() => music.gameTone(659, 0.25, 0.35), 440); // E
+    setTimeout(() => music.gameTone(1046, 0.7, 0.45), 660); // C (high)
+  }
+
+  const obs = new MutationObserver(() => {
+    if(stage.classList.contains('on')){
+      buildMatrix();
+      playUnlockSequence();
+    }
+  });
+  obs.observe(stage, { attributes: true, attributeFilter: ['class'] });
+})();
 
 })();
